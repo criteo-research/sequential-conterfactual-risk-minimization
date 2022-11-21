@@ -76,19 +76,20 @@ def result_table(dataset_name, pi0, pistar, X_test, y_test, ips_loss=None, poem_
     
 exploration_bonus = {'scene':.025, 'yeast':2, 'tmc2007':4}
     
-def make_baselines_skylines(dataset_name, X_train, y_train):
+def make_baselines_skylines(dataset_name, X_train, y_train, bonus: float = None):
     pistar = MultiOutputClassifier(LogisticRegressionCV(max_iter=10000, n_jobs=6), n_jobs=6)
     pistar.fit(X_train, y_train)
     
     n_0 = int(len(X_train)*.05)
     # print('learning pi0 on', n_0, 'data points')
-    X_0 = X_train[:n_0,:]
-    y_0 = y_train[:n_0,:]
+    X_0 = X_train[-n_0:,:]
+    y_0 = y_train[-n_0:,:]
     pi0 = MultiOutputClassifier(LogisticRegression(), n_jobs=6)
     pi0.fit(X_0, y_0)
     
     # making sure every class has non-zero proba and pi0 is not too good
-    bonus = exploration_bonus[dataset_name]
+    if bonus is None:
+        bonus = exploration_bonus[dataset_name]
     for i in range(y_train.shape[1]):
         pi0.estimators_[i].coef_ = pi0.estimators_[i].coef_ + bonus
         

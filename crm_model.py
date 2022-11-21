@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 
 import jax
@@ -22,6 +23,7 @@ class Model(object):
     def beta(self, beta):
         # beta is (d, k)
         self.beta_ = beta.reshape(self.d, self.k)
+        # self.beta_ = jnp.clip(self.beta_, 1e-50, 1e50)
         
     @staticmethod
     def random_model(d, k, seed=None):
@@ -63,21 +65,25 @@ class Model(object):
     def crm_loss(self, crm_dataset, 
                  snips = True,
                  lambda_: float = 0,
-                 clip = 1e10,
+                 max_per_instance_ips = 1e10,
+                 max_per_instance_dynamic_log_ips = 50,
                  verbose: int = 0,
+                 min_pred: float = 1e-20,
+                 max_log_ips: float = 50,
+                 min_per_instance_importance_weights: float = 1e-20,
                  **args):
         
         n = crm_dataset.features.shape[0]
 
         # pi
         predictions = self.predict_proba(crm_dataset.features, crm_dataset.actions)      
-        predictions = jnp.clip(predictions, 1e-20, 1.)
+        predictions = jnp.clip(predictions, min_pred, 1.)
         if verbose > 1: jax.debug.print('\tpreds: {} [{} ; {}]', 
                                     predictions.shape,
-                                    jnp.exp(predictions).min(), 
-                                    jnp.exp(predictions).max())
+                                    predictions.min(), 
+                                    predictions.max())
         per_instance_log_predictions = jnp.log(predictions).sum(axis=1)
-        if verbose > 1: jax.debug.print('\tlog preds / instance: {} [{} ; {}]', 
+        if verbose > 1: jax.debug.print('\tpreds / instance: {} [{} ; {}]', 
                                     per_instance_log_predictions.shape,
                                     jnp.exp(per_instance_log_predictions).min(), 
                                     jnp.exp(per_instance_log_predictions).max())
@@ -89,8 +95,8 @@ class Model(object):
                             per_instance_log_propensities.shape,
                             per_instance_log_propensities.min(),
                             per_instance_log_propensities.max())
-            zero_props = (crm_dataset.propensities.min(axis=1) == 0).astype(int).sum()
-            jax.debug.print('\tzero props: {} / {}', zero_props, n)
+            zero_props = (crm_dataset.propensities.min(axis=1) < 1e20).astype(int).sum()
+            jax.debug.print('\t~zero props: {} / {}', zero_props, n)
             
         # IPS
         per_instance_log_importance_weights = per_instance_log_predictions - per_instance_log_propensities
@@ -99,11 +105,11 @@ class Model(object):
         if verbose > 0: defunct = self.check_propensity_overfitting(jnp.exp(per_instance_log_importance_weights))
         
         # clipping
-        per_instance_log_importance_weights = jnp.clip(per_instance_log_importance_weights, -50, 50)
+        per_instance_log_importance_weights = jnp.clip(per_instance_log_importance_weights, -max_log_ips, max_log_ips)
         ips_q10, ips_q90 = jnp.quantile(per_instance_log_importance_weights, 
                                         jnp.array([.1,.9]))        
         M = ips_q90 - ips_q10
-        M = jnp.max(jnp.array([1e2, M]))
+        M = jnp.max(jnp.array([max_per_instance_dynamic_log_ips, M]))
         if verbose > 1: 
             jax.debug.print("\tIPS q10/90:  exp({}) / exp({}) = exp({}) = {}", ips_q10, ips_q90, M, jnp.exp(M))
             jax.debug.print('\tlog(IPS): [{} ; {}]', 
@@ -111,8 +117,8 @@ class Model(object):
                             per_instance_log_importance_weights.max())
             
         per_instance_importance_weights = jnp.exp(per_instance_log_importance_weights)
-        per_instance_importance_weights = jnp.clip(per_instance_importance_weights, 1e-20, jnp.exp(M))        
-        per_instance_importance_weights = jnp.clip(per_instance_importance_weights, 1e-20, clip)        
+        per_instance_importance_weights = jnp.clip(per_instance_importance_weights, min_per_instance_importance_weights, jnp.exp(M))        
+        per_instance_importance_weights = jnp.clip(per_instance_importance_weights, min_per_instance_importance_weights, max_per_instance_ips)        
 
         if verbose > 1: jax.debug.print('\tclipped IPS: {} - {}', 
                                     per_instance_importance_weights.min(), 
@@ -137,11 +143,9 @@ class Model(object):
             total_loss = per_instance_importance_weighted_rewards.mean()
         
         # POEM
-        if lambda_ > 0:
-            total_loss += lambda_ * jnp.sqrt(jnp.var(per_instance_importance_weights) / n)
-        
-        total_loss = jnp.max(jnp.array([defunct, total_loss]))
-        
+        if lambda_ != 0:
+            total_loss += lambda_ * jnp.sqrt(1e-10 + jnp.var(per_instance_importance_weights) / n)
+                
         return total_loss / self.k
     
     def fit(self, crm_dataset, verbose: int = 0, beta_start: float = 0,
@@ -164,6 +168,6 @@ class Model(object):
         self.beta = solution.params
 
         if verbose: 
-            print("Optim finished:", solution.state, file=sys.stderr)
+            print("Optim finished:", solution.state)
 
         return self

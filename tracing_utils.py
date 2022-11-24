@@ -9,7 +9,6 @@ class LossHistory(object):
         self.y_test = y_test
         self.hamming_loss = []
         self.crm_loss = []
-        self.unif_crm_loss = []
         self.betas = []
         self.n_samples = []
         self.n_actions = []

@@ -1,5 +1,5 @@
 import numpy as np
-
+import json
 from sklearn.linear_model import LogisticRegression, LogisticRegressionCV
 from sklearn.multioutput import MultiOutputClassifier
 
@@ -40,38 +40,49 @@ def stochastic_hamming_loss(pi, X_test, y_test):
     return (fn+fp)/(y_test.shape[0]*y_test.shape[1])
 
 
-def result_table(dataset_name, pi0, pistar, X_test, y_test, ips_loss=None, poem_loss=None, dynamic_ips_loss=None):
+def result_table(dataset_name, 
+                 pi0, pistar, 
+                 X_test, y_test, 
+                 ips_loss=None, poem_loss=None, dynamic_ips_loss=None):
     
     crm_stats = crm_paper_results[dataset_name]
     vrcrm_stats = vrcrm_paper_results[dataset_name]
+    repro_results = json.load(open('repro_results.json'))
+    
+    if pi0:
+        baseline = stochastic_hamming_loss(pi0, X_test, y_test)
+    else:
+        baseline = repro_results[dataset_name]["Baseline"]
+    if pistar:
+        skyline = stochastic_hamming_loss(pistar, X_test, y_test)
+    else:
+        skyline = repro_results[dataset_name]["Skyline"]
+    if ips_loss is None:
+        ips_loss = repro_results[dataset_name]["IPS"]
+    if poem_loss is None:
+        poem_loss = repro_results[dataset_name]["POEM"]
     
     print('Baseline -- crm paper: %.3f -- vrcrm paper: %.3f -- ours: %.3f' % (
         crm_stats["pi0"]/y_test.shape[1], 
         vrcrm_stats["pi0"]/y_test.shape[1],         
-        stochastic_hamming_loss(pi0, X_test, y_test)
+        baseline
     ))
     print('IPS      -- crm paper: %.3f -- vrcrm paper: %.3f' % (
         crm_stats["ips"]/y_test.shape[1],
         vrcrm_stats["ips"]/y_test.shape[1]        
     ), end='')
-    if ips_loss is not None:
-        print(' -- ours: %.3f' % ips_loss)
-    else:
-        print()
+    print(' -- ours: %.3f' % ips_loss)
     if dynamic_ips_loss is not None:
         print('Dynamic IPS                                        -- ours: %.3f' % dynamic_ips_loss)
     print('POEM     -- crm paper: %.3f -- vrcrm paper: %.3f' % (
         crm_stats["poem"]/y_test.shape[1],
         vrcrm_stats["poem"]/y_test.shape[1]
     ), end='')
-    if poem_loss is not None:
-        print(' -- ours: %.3f' % poem_loss)
-    else:
-        print()
+    print(' -- ours: %.3f' % poem_loss)
     print('Skyline  -- crm paper: %.3f -- vrcrm paper: %.3f -- ours: %.3f' % (
         crm_stats["pi*"]/y_test.shape[1], 
         vrcrm_stats["pi*"]/y_test.shape[1], 
-        stochastic_hamming_loss(pistar, X_test, y_test)
+        skyline
     ))
     
 exploration_bonus = {'scene':.025, 'yeast':2, 'tmc2007':4}

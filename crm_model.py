@@ -61,11 +61,12 @@ class Model(object):
 #         if not (lower_bound <= 1 <= upper_bound):
 #             jax.debug.print("WARN: propensity overfitting detected")
         return (avg < 2).astype(int)
-        
+
+
     def crm_loss(self, crm_dataset, 
                  snips = True,
                  lambda_: float = 0,
-                 max_per_instance_ips = 1e10,
+                 max_per_instance_ips = 5e4,
                  max_per_instance_dynamic_log_ips = 50,
                  verbose: int = 0,
                  min_pred: float = 1e-20,

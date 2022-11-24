@@ -2,10 +2,10 @@ import numpy as np
 from sklearn.datasets import load_svmlight_file
 from sklearn.model_selection import train_test_split
 from sklearn.random_projection import GaussianRandomProjection
-from sklearn.preprocessing import MultiLabelBinarizer
+from sklearn.preprocessing import MultiLabelBinarizer, StandardScaler
 from sklearn.preprocessing import add_dummy_feature
 
-def load_dataset(dataset_name, test_size=.25, seed=0, add_intercept=True):
+def load_dataset(dataset_name, test_size=.25, seed=0, add_intercept=True, scale=False):
     X_train, y_train_ = load_svmlight_file(dataset_name+'_train.svm', multilabel=True)
     X_train = np.array(X_train.todense())
     X_test, y_test_ = load_svmlight_file(dataset_name+'_test.svm', multilabel=True)
@@ -28,7 +28,12 @@ def load_dataset(dataset_name, test_size=.25, seed=0, add_intercept=True):
         fh = GaussianRandomProjection(n_components=1000)
         X_train = fh.fit_transform(X_train)
         X_test = fh.transform(X_test)
-    
+
+    if scale:
+        scaler = StandardScaler()
+        X_train = scaler.fit_transform(X_train)
+        X_test = scaler.transform(X_test)
+        
     labels = onehot_labeller.classes_.astype(int)
 
     print("X_train:", X_train.shape, "y_train:", y_train.shape)

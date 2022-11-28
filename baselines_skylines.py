@@ -2,6 +2,8 @@ import numpy as np
 import json
 from sklearn.linear_model import LogisticRegression, LogisticRegressionCV
 from sklearn.multioutput import MultiOutputClassifier
+from sklearn.neural_network import MLPClassifier
+
 
 crm_paper_results = {
     'scene': {
@@ -13,6 +15,9 @@ crm_paper_results = {
     },
     'tmc2007': {
         'pi0': 3.345, 'ips': 2.808, 'poem': 2.197, 'pi*':1.189        
+    },
+    'rcv1_topics': {
+        'pi0': 1.463, 'ips': 0.921, 'poem': 0.918, 'pi*':0.222        
     }
 }
 
@@ -26,6 +31,9 @@ vrcrm_paper_results = {
     },
     'tmc2007': {
         'pi0': 5.053, 'ips': 4.416, 'poem': 4.505, 'pi*':1.241        
+    },
+    'rcv1_topics': {
+        'pi0': 1.949, 'ips': 1.240, 'poem': 1.306, 'pi*':0.437        
     }
 }
 
@@ -87,15 +95,18 @@ def result_table(dataset_name,
     
 exploration_bonus = {'scene':.025, 'yeast':2, 'tmc2007':4}
     
-def make_baselines_skylines(dataset_name, X_train, y_train, bonus: float = None):
-    pistar = MultiOutputClassifier(LogisticRegressionCV(max_iter=10000, n_jobs=6), n_jobs=6)
+def make_baselines_skylines(dataset_name, X_train, y_train, bonus: float = None, mlp=False, n_jobs=4):
+    if mlp:
+        pistar = MultiOutputClassifier(MLPClassifier(hidden_layer_sizes=(500, 100, 40, 10,)), n_jobs=n_jobs)
+    else:
+        pistar = MultiOutputClassifier(LogisticRegressionCV(max_iter=10000, n_jobs=6), n_jobs=n_jobs)
     pistar.fit(X_train, y_train)
     
     n_0 = int(len(X_train)*.05)
     # print('learning pi0 on', n_0, 'data points')
     X_0 = X_train[-n_0:,:]
     y_0 = y_train[-n_0:,:]
-    pi0 = MultiOutputClassifier(LogisticRegression(), n_jobs=6)
+    pi0 = MultiOutputClassifier(LogisticRegression(), n_jobs=n_jobs)
     pi0.fit(X_0, y_0)
     
     # making sure every class has non-zero proba and pi0 is not too good

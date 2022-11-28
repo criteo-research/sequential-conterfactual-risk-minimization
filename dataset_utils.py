@@ -5,7 +5,7 @@ from sklearn.random_projection import GaussianRandomProjection
 from sklearn.preprocessing import MultiLabelBinarizer, StandardScaler
 from sklearn.preprocessing import add_dummy_feature
 
-def load_dataset(dataset_name, test_size=.25, seed=0, add_intercept=True, scale=False):
+def load_dataset(dataset_name, test_size=.25, seed=0, add_intercept=True, scale=False, reduce_dim: int = None):
     X_train, y_train_ = load_svmlight_file(dataset_name+'_train.svm', multilabel=True)
     X_train = np.array(X_train.todense())
     X_test, y_test_ = load_svmlight_file(dataset_name+'_test.svm', multilabel=True)
@@ -23,9 +23,11 @@ def load_dataset(dataset_name, test_size=.25, seed=0, add_intercept=True, scale=
         X_all, y_all, test_size=test_size, random_state=seed
     )
     
-    if dataset_name == 'tmc2007':
+    if reduce_dim is None and dataset_name == 'tmc2007':
+        reduce_dim = 1000
+    if reduce_dim:
         print("reducing dimension for TMC dataset")
-        fh = GaussianRandomProjection(n_components=1000)
+        fh = GaussianRandomProjection(n_components=reduce_dim)
         X_train = fh.fit_transform(X_train)
         X_test = fh.transform(X_test)
 

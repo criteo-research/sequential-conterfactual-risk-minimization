@@ -25,6 +25,12 @@ class Model(object):
         self.beta_ = beta.reshape(self.d, self.k)
         # self.beta_ = jnp.clip(self.beta_, 1e-50, 1e50)
         
+    def theoretical_exploration_bonus(self, n_collected_samples: int, n_final_samples: int):
+        assert n_collected_samples <= n_final_samples
+        complexity_upper_bound = self.d * np.log(n_collected_samples)
+        res = np.sqrt(18 * complexity_upper_bound + np.log(3 * n_final_samples))
+        return res        
+        
     @staticmethod
     def random_model(d, k, seed=None):
         np.random.seed(seed)

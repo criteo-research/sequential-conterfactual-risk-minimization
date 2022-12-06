@@ -7,6 +7,8 @@ import jax.numpy as jnp
 import jaxopt
 from jax.scipy.special import expit as jexpit
 
+from joblib import Parallel, delayed
+
 
 class Model(object):
     
@@ -28,7 +30,7 @@ class Model(object):
     def theoretical_exploration_bonus(self, n_collected_samples: int, n_final_samples: int):
         assert n_collected_samples <= n_final_samples
         complexity_upper_bound = self.d * np.log(n_collected_samples)
-        res = np.sqrt(18 * complexity_upper_bound + np.log(3 * n_final_samples))
+        res = np.sqrt(18 * complexity_upper_bound + np.log(3 * n_final_samples)) / np.sqrt(n_collected_samples)
         return res        
         
     @staticmethod
@@ -178,3 +180,23 @@ class Model(object):
             print("Optim finished:", solution.state)
 
         return self
+    
+    DEFAULT_GRID = [1e-3, 1e-2, 1e-1, 0, 1, 1e2, 
+                    -1e-3, -1e-2, -1e-1, -1, -1e2]
+
+    def cross_validate_lambda(self, crm_dataset, n_final_samples: int, 
+                              grid=DEFAULT_GRID, verbose: int = 0, beta_start: float = 0, seed: int = 0,
+                              n_jobs=5, **loss_args):
+        loss_args['verbose'] = verbose
+
+        train_crm_dataset, validation_dataset = crm_dataset.split(seed=seed)
+        theoretical_lambda = self.theoretical_exploration_bonus(len(crm_dataset), n_final_samples)
+        lambdas_to_test = np.array(grid) #* theoretical_lambda
+        
+        def eval(l):
+            m = Model(beta=np.ones_like(self.beta) * beta_start)
+            loss = m.fit(train_crm_dataset, lambda_=l).crm_loss(validation_dataset, lambda_= 0)#-1 * theoretical_lambda)
+            return (loss, l)
+        
+        best_loss, best_lambda = sorted(Parallel(n_jobs=n_jobs)(delayed(eval)(l) for l in lambdas_to_test))[-1]
+        return best_lambda

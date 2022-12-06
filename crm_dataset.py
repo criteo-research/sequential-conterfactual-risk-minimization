@@ -1,5 +1,7 @@
 import numpy as np
 
+from sklearn.model_selection import train_test_split
+
 class CRMDataset(object):
     
     def __init__(self):
@@ -42,7 +44,7 @@ class CRMDataset(object):
         self.propensities_np = np.vstack(self.propensities_)
         self.actions_np = np.vstack(self.actions_)
         self.features_np = np.vstack(self.features_)
-        self.rewards_np = np.vstack(self.rewards_).reshape((self.features.shape[0],1))
+        self.rewards_np = np.vstack(self.rewards_).reshape((self.features.shape[0],1))    
         
     @property
     def actions(self):
@@ -91,6 +93,25 @@ class CRMDataset(object):
         assert self.rewards.shape[1] == 1
         
         return self
+    
+    def split(self, ratio=.25, seed=0):
+        p_1, p_2, a_1, a_2, f_1, f_2, r_1, r_2 = train_test_split(self.propensities, self.actions, self.features, self.rewards,
+                                                                  test_size=ratio, random_state=seed)
+        d1 = CRMDataset()
+        d1.propensities_ = [p_1]
+        d1.actions_ = [a_1]
+        d1.features_ = [f_1]
+        d1.rewards_ = [r_1]
+        d1._generate_arrays()
+        
+        d2 = CRMDataset()
+        d2.propensities_ = [p_2]
+        d2.actions_ = [a_2]
+        d2.features_ = [f_2]
+        d2.rewards_ = [r_2]
+        d2._generate_arrays()
+        
+        return d1, d2
     
 if __name__ == '__main__':
     CRMDataset()

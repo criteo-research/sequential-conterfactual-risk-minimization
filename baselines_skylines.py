@@ -1,5 +1,6 @@
 import numpy as np
 import json
+import copy
 from sklearn.linear_model import LogisticRegression, LogisticRegressionCV
 from sklearn.multioutput import MultiOutputClassifier
 from sklearn.neural_network import MLPClassifier
@@ -95,11 +96,21 @@ def result_table(dataset_name,
     
 exploration_bonus = {'scene':.025, 'yeast':2, 'tmc2007':4}
     
+
+def epsilon_greedy_predict_proba(clf, X, epsilon):
+    predictions = np.array([_[:,1] for _ in clf.predict_proba(X)]).T 
+    uniform_predictions = .5 * np.ones_like(predictions)
+    predictions = (1 - epsilon) * predictions + epsilon * uniform_predictions
+    return predictions
+    
+        
 def make_baselines_skylines(dataset_name, X_train, y_train, bonus: float = None, mlp=False, n_jobs=4):
     if mlp:
-        pistar = MultiOutputClassifier(MLPClassifier(hidden_layer_sizes=(500, 100, 40, 10,)), n_jobs=n_jobs)
+        base_clf = MLPClassifier(hidden_layer_sizes=(500, 100, 40, 10,))
+        pistar = MultiOutputClassifier(base_clf, n_jobs=n_jobs)
     else:
-        pistar = MultiOutputClassifier(LogisticRegressionCV(max_iter=10000, n_jobs=6), n_jobs=n_jobs)
+        base_clf = LogisticRegressionCV(max_iter=10000, n_jobs=6)            
+        pistar = MultiOutputClassifier(base_clf, n_jobs=n_jobs)
     pistar.fit(X_train, y_train)
     
     n_0 = int(len(X_train)*.05)

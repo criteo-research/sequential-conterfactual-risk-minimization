@@ -80,6 +80,7 @@ class Model(object):
                  min_pred: float = 1e-20,
                  max_log_ips: float = 50,
                  min_per_instance_importance_weights: float = 1e-20,
+                 compute_ess = False,
                  **args):
         
         n = crm_dataset.features.shape[0]
@@ -145,6 +146,13 @@ class Model(object):
         if verbose > 1: jax.debug.print('\tIPS-R: {} - {}', 
                                     per_instance_importance_weighted_rewards.min(), 
                                     per_instance_importance_weighted_rewards.max())
+        
+        # ESS
+        if compute_ess:
+            squared_importance_weights_sum = per_instance_importance_weights.sum() ** 2
+            importance_weights_sum_of_squares = (per_instance_importance_weights ** 2).sum()
+            effective_sample_size = squared_importance_weights_sum / importance_weights_sum_of_squares / n
+        
         # SNIPS
         if snips:
             total_loss = per_instance_importance_weighted_rewards.sum() / per_instance_importance_weights.sum()
@@ -154,8 +162,13 @@ class Model(object):
         # POEM
         if lambda_ != 0:
             total_loss += lambda_ * jnp.sqrt(1e-10 + jnp.var(per_instance_importance_weights) / n)
-                
-        return total_loss / self.k
+
+        result = total_loss / self.k
+            
+        if compute_ess:
+            return result, effective_sample_size
+            
+        return result
     
     def fit(self, crm_dataset, verbose: int = 0, beta_start: float = 0,
             **loss_args):
@@ -185,18 +198,48 @@ class Model(object):
                     -1e-3, -1e-2, -1e-1, -1, -1e2]
 
     def cross_validate_lambda(self, crm_dataset, n_final_samples: int, 
-                              grid=DEFAULT_GRID, verbose: int = 0, beta_start: float = 0, seed: int = 0,
+                              grid=DEFAULT_GRID, verbose: int = 0, beta_start: float = 0, 
+                              seed: int = 0, shuffle=True,
                               n_jobs=5, **loss_args):
         loss_args['verbose'] = verbose
 
-        train_crm_dataset, validation_dataset = crm_dataset.split(seed=seed)
+        train_crm_dataset, validation_dataset = crm_dataset.split(seed=seed, shuffle=shuffle)
         theoretical_lambda = self.theoretical_exploration_bonus(len(crm_dataset), n_final_samples)
         lambdas_to_test = np.array(grid) #* theoretical_lambda
         
         def eval(l):
-            m = Model(beta=np.ones_like(self.beta) * beta_start)
-            loss = m.fit(train_crm_dataset, lambda_=l).crm_loss(validation_dataset, lambda_= 0)#-1 * theoretical_lambda)
+            m = Model(beta=np.ones_like(self.beta) * beta_start).fit(train_crm_dataset, lambda_=l)
+            loss = m.crm_loss(validation_dataset, lambda_= 0, snips = True)#-1 * theoretical_lambda)
             return (loss, l)
         
         best_loss, best_lambda = sorted(Parallel(n_jobs=n_jobs)(delayed(eval)(l) for l in lambdas_to_test))[-1]
         return best_lambda
+    
+    
+class EpsilonGreedyModel(object):
+    
+    def __init__(self, epsilon, beta):
+        self.epsilon = epsilon
+        self.model = Model(beta)
+        self.uniform_model = Model(np.zeros_like(beta))
+        
+    def predict_proba(self, features, actions, randomize=False):
+        predictions = self.model.predict_proba(features, actions)
+        if randomize:
+            uniform_predictions = self.uniform_model.predict_proba(features, actions)
+            predictions = (1 - self.epsilon) * predictions + self.epsilon * uniform_predictions
+        return predictions
+    
+    def expected_hamming_loss(self, X, y):
+        return self.model.expected_hamming_loss(X,y)
+    
+    def fit(self, *args, **kwargs):
+        return self.model.fit(*args, **kwargs)
+    
+    def crm_loss(self, *args, **kwargs):
+        return self.model.crm_loss(*args, **kwargs)
+
+    @staticmethod
+    def null_model(d, k, epsilon=.05):
+        beta = jnp.array(np.zeros((d, k)))
+        return EpsilonGreedyModel(epsilon, beta)

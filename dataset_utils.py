@@ -23,10 +23,10 @@ def load_dataset(dataset_name, test_size=.25, seed=0, add_intercept=True, scale=
         X_all, y_all, test_size=test_size, random_state=seed
     )
     
-    if reduce_dim is None and dataset_name == 'tmc2007':
-        reduce_dim = 1000
+    if reduce_dim is None and dataset_name in ('tmc2007', 'rcv1_topics',):
+        reduce_dim = 300
     if reduce_dim:
-        print("reducing dimension for TMC dataset")
+        print("reducing dimension for %s dataset" % dataset_name)
         fh = GaussianRandomProjection(n_components=reduce_dim)
         X_train = fh.fit_transform(X_train)
         X_test = fh.transform(X_test)

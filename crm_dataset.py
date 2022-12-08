@@ -94,9 +94,12 @@ class CRMDataset(object):
         
         return self
     
-    def split(self, ratio=.25, seed=0):
-        p_1, p_2, a_1, a_2, f_1, f_2, r_1, r_2 = train_test_split(self.propensities, self.actions, self.features, self.rewards,
-                                                                  test_size=ratio, random_state=seed)
+    def split(self, ratio=.25, seed=0, shuffle=True):
+        p_1, p_2, a_1, a_2, f_1, f_2, r_1, r_2 = train_test_split(
+            self.propensities, self.actions, self.features, self.rewards,
+            test_size=ratio, random_state=seed, shuffle=shuffle, 
+            # stratify=(self.propensities > .05).astype(int)
+        )
         d1 = CRMDataset()
         d1.propensities_ = [p_1]
         d1.actions_ = [a_1]

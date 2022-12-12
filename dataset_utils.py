@@ -7,9 +7,20 @@ from sklearn.preprocessing import add_dummy_feature
 
 def load_dataset(dataset_name, test_size=.25, seed=0, add_intercept=True, scale=False, reduce_dim: int = None):
     X_train, y_train_ = load_svmlight_file(dataset_name+'_train.svm', multilabel=True)
-    X_train = np.array(X_train.todense())
     X_test, y_test_ = load_svmlight_file(dataset_name+'_test.svm', multilabel=True)
-    X_test = np.array(X_test.todense())       
+
+    if reduce_dim is None and dataset_name in ('tmc2007', 'rcv1_topics',):
+        reduce_dim = 300
+    if reduce_dim:
+        print("reducing dimension for %s dataset" % dataset_name)
+        fh = GaussianRandomProjection(n_components=reduce_dim)
+        X_train = fh.fit_transform(X_train)
+        X_test = fh.transform(X_test)
+    try:
+        X_train = np.array(X_train.todense())
+        X_test = np.array(X_test.todense())       
+    except AttributeError:
+        pass
     
     onehot_labeller = MultiLabelBinarizer()
     y_train = onehot_labeller.fit_transform(y_train_).astype(int)
@@ -19,18 +30,11 @@ def load_dataset(dataset_name, test_size=.25, seed=0, add_intercept=True, scale=
     if add_intercept:
         X_all = add_dummy_feature(X_all)
     y_all = np.vstack([y_train, y_test])
+    
     X_train, X_test, y_train, y_test = train_test_split(
         X_all, y_all, test_size=test_size, random_state=seed
     )
     
-    if reduce_dim is None and dataset_name in ('tmc2007', 'rcv1_topics',):
-        reduce_dim = 300
-    if reduce_dim:
-        print("reducing dimension for %s dataset" % dataset_name)
-        fh = GaussianRandomProjection(n_components=reduce_dim)
-        X_train = fh.fit_transform(X_train)
-        X_test = fh.transform(X_test)
-
     if scale:
         scaler = StandardScaler()
         X_train = scaler.fit_transform(X_train)

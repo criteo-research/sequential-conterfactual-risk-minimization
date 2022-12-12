@@ -161,7 +161,8 @@ class Model(object):
         
         # POEM
         if lambda_ != 0:
-            total_loss += lambda_ * jnp.sqrt(1e-10 + jnp.var(per_instance_importance_weights) / n)
+            per_instance_importance_weighted_rewards_variance = jnp.sum(jnp.cov(per_instance_importance_weighted_rewards))
+            total_loss += lambda_ * jnp.sqrt(1e-10 + per_instance_importance_weighted_rewards_variance / n)
 
         result = total_loss / self.k
             
@@ -238,6 +239,10 @@ class EpsilonGreedyModel(object):
     
     def crm_loss(self, *args, **kwargs):
         return self.model.crm_loss(*args, **kwargs)
+    
+    @property
+    def beta(self):
+        return self.model.beta
 
     @staticmethod
     def null_model(d, k, epsilon=.05):

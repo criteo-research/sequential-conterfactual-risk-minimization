@@ -69,14 +69,14 @@ def run_scrm(args, X_train, y_train, X_test, y_test, pi0, samples):
 
     for i in range(args.n_reruns):
         np.random.seed(i * 42 + 1000)
-        print(i, end='')
+        print("SCRM", i, end='')
 
         scrm_model = Model.null_model(X_test.shape[1], y_test.shape[1])
         scrm_dataset = CRMDataset()
 
         start = 0
         for j, end in enumerate(samples):
-            print("SCRM", '.', end='')
+            print('.', end='')
             # current batch
             X = X_train[start:end, :]
             y = y_train[start:end, :]

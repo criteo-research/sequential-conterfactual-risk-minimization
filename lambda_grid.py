@@ -32,7 +32,7 @@ def rollout_indices(data_size, rollout_scheme, n_rollouts, min_samples=100):
         raise ValueError(rollout_scheme)
 
 
-def run_crm(args):
+def run_crm(args, X_train, y_train, X_test, y_test, pi0):
 
     test_sampling_probas = np.array([_[:, 1] for _ in pi0.predict_proba(X_test)]).T
     crm_reward = CRMDataset().update_from_supervised_dataset(
@@ -81,7 +81,7 @@ def run_crm(args):
     return crm_loss_by_lambda, crm_reward_by_lambda
 
 
-def run_scrm(args):
+def run_scrm(args, X_train, y_train, X_test, y_test, pi0):
     ## S-CRM
     scrm_loss_by_lambda = []
     scrm_reward_by_lambda = []
@@ -134,7 +134,7 @@ def run_scrm(args):
     return scrm_loss_by_lambda, scrm_reward_by_lambda
 
 
-def run_baseskyline():
+def run_baseskyline(args, X_test, y_test, pi0, pistar):
     baseline_reward = np.mean([
         CRMDataset().update_from_supervised_dataset(
             X_test, y_test,
@@ -204,7 +204,7 @@ def export_results(args,
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('dataset')
+    parser.add_argument('dataset_name')
     parser.add_argument('--n-rollouts', '-rol', type=int, default=10)
     parser.add_argument('--n-replays', '-rep', type=int, default=6)
     parser.add_argument('--n-reruns', '-rer', type=int, default=5)
@@ -220,11 +220,11 @@ if __name__ == '__main__':
     samples = rollout_indices(len(X_train), args.rollout_scheme, args.n_rollouts)
     print("rollout @", samples)
 
-    crm_loss_by_lambda, crm_reward_by_lambda = run_crm()
+    crm_loss_by_lambda, crm_reward_by_lambda = run_crm(args, X_train, y_train, X_test, y_test, pi0)
 
-    scrm_loss_by_lambda, scrm_reward_by_lambda = run_scrm()
+    scrm_loss_by_lambda, scrm_reward_by_lambda = run_scrm(args, X_train, y_train, X_test, y_test, pi0)
 
-    baseline_rewards, skyline_rewards, baseline_loss, skyline_loss = run_baseskyline()
+    baseline_rewards, skyline_rewards, baseline_loss, skyline_loss = run_baseskyline(args, X_test, y_test, pi0, pistar)
 
     export_results(args,
                    baseline_loss, skyline_loss, crm_loss_by_lambda, scrm_loss_by_lambda,

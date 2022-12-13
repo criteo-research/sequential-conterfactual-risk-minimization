@@ -32,7 +32,7 @@ def rollout_indices(data_size, rollout_scheme, n_rollouts, min_samples=100):
         raise ValueError(rollout_scheme)
 
 
-def run_crm(args, X_train, y_train, X_test, y_test, pi0):
+def run_crm(args, X_train, y_train, X_test, y_test, pi0, samples):
 
     test_sampling_probas = np.array([_[:, 1] for _ in pi0.predict_proba(X_test)]).T
     crm_reward = CRMDataset().update_from_supervised_dataset(
@@ -81,7 +81,7 @@ def run_crm(args, X_train, y_train, X_test, y_test, pi0):
     return crm_loss_by_lambda, crm_reward_by_lambda
 
 
-def run_scrm(args, X_train, y_train, X_test, y_test, pi0):
+def run_scrm(args, X_train, y_train, X_test, y_test, pi0, samples):
     ## S-CRM
     scrm_loss_by_lambda = []
     scrm_reward_by_lambda = []
@@ -209,8 +209,8 @@ if __name__ == '__main__':
     parser.add_argument('--n-replays', '-rep', type=int, default=6)
     parser.add_argument('--n-reruns', '-rer', type=int, default=5)
     parser.add_argument('--rollout-scheme', '-rs', default='linear', choices=('linear', 'doubling'))
-    parser.add_argument('--lambda-grid', '-lg', default=DEFAULT_LAMBDA_GRID,
-                        type=lambda x: [float(_) for _ in x.split(',')])
+    def parse_lambdas(x): return [float(_) for _ in x.split(',')]
+    parser.add_argument('--lambda-grid', '-lg', default=DEFAULT_LAMBDA_GRID, type=parse_lambdas)
 
     args = parser.parse_args()
 
@@ -220,9 +220,9 @@ if __name__ == '__main__':
     samples = rollout_indices(len(X_train), args.rollout_scheme, args.n_rollouts)
     print("rollout @", samples)
 
-    crm_loss_by_lambda, crm_reward_by_lambda = run_crm(args, X_train, y_train, X_test, y_test, pi0)
+    crm_loss_by_lambda, crm_reward_by_lambda = run_crm(args, X_train, y_train, X_test, y_test, pi0, samples)
 
-    scrm_loss_by_lambda, scrm_reward_by_lambda = run_scrm(args, X_train, y_train, X_test, y_test, pi0)
+    scrm_loss_by_lambda, scrm_reward_by_lambda = run_scrm(args, X_train, y_train, X_test, y_test, pi0, samples)
 
     baseline_rewards, skyline_rewards, baseline_loss, skyline_loss = run_baseskyline(args, X_test, y_test, pi0, pistar)
 

@@ -133,7 +133,7 @@ def run_scrm(args, X_train, y_train, X_test, y_test, pi0, samples):
     return scrm_loss_by_lambda, scrm_reward_by_lambda
 
 
-def run_baseskyline(args, X_test, y_test, pi0, pistar):
+def run_baseskyline(args, X_test, y_test, pi0, pistar, samples):
     baseline_reward = np.mean([
         CRMDataset().update_from_supervised_dataset(
             X_test, y_test,
@@ -223,7 +223,7 @@ if __name__ == '__main__':
 
     scrm_loss_by_lambda, scrm_reward_by_lambda = run_scrm(args, X_train, y_train, X_test, y_test, pi0, samples)
 
-    baseline_rewards, skyline_rewards, baseline_loss, skyline_loss = run_baseskyline(args, X_test, y_test, pi0, pistar)
+    baseline_rewards, skyline_rewards, baseline_loss, skyline_loss = run_baseskyline(args, X_test, y_test, pi0, pistar, samples)
 
     export_results(args,
                    baseline_loss, skyline_loss, crm_loss_by_lambda, scrm_loss_by_lambda,

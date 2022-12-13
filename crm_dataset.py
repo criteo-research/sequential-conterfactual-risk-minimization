@@ -2,15 +2,16 @@ import numpy as np
 
 from sklearn.model_selection import train_test_split
 
+
 class CRMDataset(object):
-    
     def __init__(self):
 
         self.propensities_ = []
         self.actions_ = []
         self.rewards_ = []
         self.features_ = []
-        
+        self.rollouts_ = []
+
         self.propensities_np = None
         self.actions_np = None
         self.rewards_np = None
@@ -67,7 +68,6 @@ class CRMDataset(object):
         # y is (n,k)
         # probas is (n,k)
         n = X.shape[0]
-        d = X.shape[1]
         k = y.shape[1]
 
         assert len(X) == len(y) == len(probas), (len(X) , len(y) , len(probas))
@@ -83,7 +83,7 @@ class CRMDataset(object):
             self.propensities_ += [propensities]
             self.features_ += [np.array(X)]
             rewards = (1 - np.logical_xor(actions, y)).sum(axis=1).reshape((n,1))
-            assert rewards.shape == (n,1), rewards.shape
+            assert rewards.shape == (n, 1), rewards.shape
             self.rewards_ += [rewards]
                 
         self._generate_arrays()
@@ -91,9 +91,25 @@ class CRMDataset(object):
         assert self.features.shape[0] == self.actions.shape[0] == self.propensities.shape[0] == self.rewards.shape[0]
         assert self.actions.shape[1] == self.propensities.shape[1]
         assert self.rewards.shape[1] == 1
+
+        self.rollouts_ += [n * n_samples]
+
+        self.check()
         
         return self
-    
+
+    @property
+    def rollout_indices(self):
+        return np.array(list(self.iter_rollout_indices()))
+
+    def iter_rollout_indices(self):
+        start = 0
+        end = 0
+        for rollout_length in self.rollouts_:
+            end += rollout_length
+            yield start, end
+            start = end
+
     def split(self, ratio=.25, seed=0, shuffle=True):
         p_1, p_2, a_1, a_2, f_1, f_2, r_1, r_2 = train_test_split(
             self.propensities, self.actions, self.features, self.rewards,
@@ -115,6 +131,7 @@ class CRMDataset(object):
         d2._generate_arrays()
         
         return d1, d2
-    
+
+
 if __name__ == '__main__':
     CRMDataset()

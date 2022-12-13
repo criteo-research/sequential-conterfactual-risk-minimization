@@ -1,11 +1,14 @@
 import sys
-import time
-import copy
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+
+# import jax
+# from jax.config import config as jax_config
+# jax_config.update("jax_debug_nans", True)
+
 from dataset_utils import load_dataset
-from baselines_skylines import result_table, make_baselines_skylines, stochastic_hamming_loss
+from baselines_skylines import make_baselines_skylines, stochastic_hamming_loss
 from crm_dataset import CRMDataset
 from crm_model import Model
 
@@ -24,7 +27,7 @@ samples = sorted([_ for _ in samples if _ > 100])
 n_replays = 6  # actions per context
 n_reruns = 5 # to account for action stochasticity
 
-print(samples)
+print("rollout @", samples)
 
 lambda_grid = [1e-4, 1e-3, 1e-2, 1e-1, .25, .5, .75, 1, 10, 100, 0, -1e-4, -1e-3, -1e-2, -1e-1, -.25, -.5, -.75, -1, -10, -100]
 
@@ -40,6 +43,7 @@ crm_reward = CRMDataset().update_from_supervised_dataset(
 
 
 for lambda_ in lambda_grid:
+    print('lambda:', lambda_, '*'*80)
         
     crm_losses = np.ones((n_reruns, len(samples)))
     crm_rewards = np.ones((n_reruns, len(samples)))
@@ -59,25 +63,23 @@ for lambda_ in lambda_grid:
             y = y_train[start:end, :]
             if end > start:
                 # CRM play & data collection
-                sampling_probas = np.array([_[:,1] for _ in pi0.predict_proba(X)]).T 
+                sampling_probas = np.array([_[:, 1] for _ in pi0.predict_proba(X)]).T
                 crm_dataset.update_from_supervised_dataset(X, y, sampling_probas, n_samples=n_replays)
                 # learning
-                crm_model.fit(
-                    crm_dataset, 
-                    lambda_ = lambda_,
-                    verbose = 0
-                )
+                crm_model.fit(crm_dataset, lambda_=lambda_)
             # eval
-            crm_losses[i,j] = crm_model.expected_hamming_loss(X_test, y_test)
-            crm_rewards[i,j] = crm_reward * len(X)
+            crm_losses[i, j] = crm_model.expected_hamming_loss(X_test, y_test)
+            crm_rewards[i, j] = crm_reward * len(X)
             # next round
             start = end
         print()
 
     crm_loss_by_lambda += [crm_losses.mean(axis=0)[-1]]
     crm_reward_by_lambda += [crm_rewards.mean(axis=0).sum()]
-    print("Lambda:", lambda_, "final loss:", crm_loss_by_lambda[-1], "cum reward:", crm_reward_by_lambda[-1])
-    
+    print("final loss: %.3f" % crm_loss_by_lambda[-1], "cum reward: %d" % crm_reward_by_lambda[-1])
+    print('*' * 80)
+
+
 ## S-CRM
 
 scrm_loss_by_lambda = []

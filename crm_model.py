@@ -2,6 +2,9 @@ import sys
 import numpy as np
 
 import jax
+
+from crm_dataset import CRMDataset
+
 jax.config.update("jax_enable_x64", True)
 import jax.numpy as jnp
 import jaxopt
@@ -56,8 +59,7 @@ class Model(object):
     def expected_hamming_loss(self, X, y):
         y_invert = 1 - y
         invert_probas = self.predict_proba(X, y_invert)
-        return invert_probas.sum() / (self.k * y.shape[0])       
-    
+        return invert_probas.sum() / (self.k * y.shape[0])
     
     def check_propensity_overfitting(self, ips_weights):
         std = jnp.std(ips_weights)
@@ -70,8 +72,22 @@ class Model(object):
 #             jax.debug.print("WARN: propensity overfitting detected")
         return (avg < 2).astype(int)
 
+    def variance_penalty(self, rollout_indices, per_instance_importance_weighted_rewards):
+        penalty = 0
+        for start1, end1 in rollout_indices:
+            for start2, end2 in rollout_indices:
+                if start1 < start2:
+                    continue
+                rollout1_data = per_instance_importance_weighted_rewards[start1:end1]
+                rollout2_data = per_instance_importance_weighted_rewards[start2:end2]
+                rollout1_data = rollout1_data[:len(rollout1_data)][:len(rollout2_data)]
+                rollout2_data = rollout2_data[:len(rollout1_data)][:len(rollout2_data)]
+                cov = jnp.multiply(rollout1_data, rollout2_data).mean() - rollout1_data.mean()*rollout2_data.mean()
+                penalty += cov
+        penalty = jnp.sqrt(penalty / len(per_instance_importance_weighted_rewards))
+        return penalty
 
-    def crm_loss(self, crm_dataset, 
+    def crm_loss(self, crm_dataset: CRMDataset,
                  snips = True,
                  lambda_: float = 0,
                  max_per_instance_ips = 5e4,
@@ -131,8 +147,8 @@ class Model(object):
         per_instance_importance_weights = jnp.clip(per_instance_importance_weights, min_per_instance_importance_weights, max_per_instance_ips)        
 
         if verbose > 1: jax.debug.print('\tclipped IPS: {} - {}', 
-                                    per_instance_importance_weights.min(), 
-                                    per_instance_importance_weights.max())
+                                        per_instance_importance_weights.min(),
+                                        per_instance_importance_weights.max())
         
         per_instance_importance_weights = per_instance_importance_weights.reshape(
             (per_instance_importance_weights.shape[0], 1)
@@ -144,8 +160,8 @@ class Model(object):
             per_instance_importance_weights
         )
         if verbose > 1: jax.debug.print('\tIPS-R: {} - {}', 
-                                    per_instance_importance_weighted_rewards.min(), 
-                                    per_instance_importance_weighted_rewards.max())
+                                        per_instance_importance_weighted_rewards.min(),
+                                        per_instance_importance_weighted_rewards.max())
         
         # ESS
         if compute_ess:
@@ -161,14 +177,14 @@ class Model(object):
         
         # POEM
         if lambda_ != 0:
-            per_instance_importance_weighted_rewards_variance = jnp.sum(jnp.cov(per_instance_importance_weighted_rewards))
-            total_loss += lambda_ * jnp.sqrt(1e-10 + per_instance_importance_weighted_rewards_variance / n)
+            total_loss += lambda_ * self.variance_penalty(crm_dataset.rollout_indices,
+                                                           per_instance_importance_weighted_rewards)
 
         result = total_loss / self.k
             
         if compute_ess:
             return result, effective_sample_size
-            
+
         return result
     
     def fit(self, crm_dataset, verbose: int = 0, beta_start: float = 0,

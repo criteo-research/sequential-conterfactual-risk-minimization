@@ -221,15 +221,17 @@ class Model(object):
         loss_args['verbose'] = verbose
 
         train_crm_dataset, validation_dataset = crm_dataset.split(seed=seed, shuffle=shuffle)
-        theoretical_lambda = self.theoretical_exploration_bonus(len(crm_dataset), n_final_samples)
+        # theoretical_lambda = self.theoretical_exploration_bonus(len(crm_dataset), n_final_samples)
         lambdas_to_test = np.array(grid) #* theoretical_lambda
         
-        def eval(l):
-            m = Model(beta=np.ones_like(self.beta) * beta_start).fit(train_crm_dataset, lambda_=l)
-            loss = m.crm_loss(validation_dataset, lambda_= 0, snips = True)#-1 * theoretical_lambda)
-            return (loss, l)
+        def evaluate_lambda(lambda_):
+            m = Model(beta=np.ones_like(self.beta) * beta_start).fit(train_crm_dataset, lambda_=lambda_)
+            loss = m.crm_loss(validation_dataset, lambda_=0, snips=True)#-1 * theoretical_lambda)
+            return loss, lambda_
         
-        best_loss, best_lambda = sorted(Parallel(n_jobs=n_jobs)(delayed(eval)(l) for l in lambdas_to_test))[-1]
+        best_loss, best_lambda = sorted(Parallel(n_jobs=n_jobs)(
+            delayed(evaluate_lambda)(l) for l in lambdas_to_test)
+        )[-1]
         return best_lambda
     
     

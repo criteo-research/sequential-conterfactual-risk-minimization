@@ -28,7 +28,7 @@ def run_crm(args, X_train, y_train, X_test, y_test, pi0, samples):
 
     for i in range(args.n_reruns):
         np.random.seed(i * 42 + 1000)
-        print(i, end='')
+        print("CRM", i, end='')
 
         crm_model = Model.null_model(X_test.shape[1], y_test.shape[1])
         crm_dataset = CRMDataset()
@@ -76,7 +76,7 @@ def run_scrm(args, X_train, y_train, X_test, y_test, pi0, samples):
 
         start = 0
         for j, end in enumerate(samples):
-            print('.', end='')
+            print("SCRM", '.', end='')
             # current batch
             X = X_train[start:end, :]
             y = y_train[start:end, :]
@@ -135,8 +135,8 @@ def export_results(args,
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--n-rollouts', '-rol', type=int, default=10)
-    parser.add_argument('--n-replays', '-rep', type=int, default=6)
+    parser.add_argument('--n-rollouts', '-rol', type=int, default=5)
+    parser.add_argument('--n-replays', '-rep', type=int, default=4)
     parser.add_argument('--n-reruns', '-rer', type=int, default=5)
     parser.add_argument('--rollout-scheme', '-rs', default='linear', choices=('linear', 'doubling'))
     def parse_lambdas(x): return [float(_) for _ in x.split(',')]
@@ -160,6 +160,12 @@ if __name__ == '__main__':
     for dataset in datasets:
         print("DATASET:", dataset)
         args.dataset_name = dataset
+        if dataset in ('scene', 'yeast',):
+            args.n_reruns = 10
+            args.n_rollouts = 5
+        else:
+            args.n_reruns = 5
+            args.n_rollouts = 10
         X_train, y_train, X_test, y_test, labels = load_dataset(args.dataset_name)
         samples = rollout_indices(len(X_train), args.rollout_scheme, args.n_rollouts)
         pi0, pistar = make_baselines_skylines(args.dataset_name, X_train, y_train, n_jobs=4)

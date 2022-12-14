@@ -78,13 +78,16 @@ class Model(object):
             for start2, end2 in rollout_indices:
                 if start1 < start2:
                     continue
-                rollout1_data = per_instance_importance_weighted_rewards[start1:end1]
-                rollout2_data = per_instance_importance_weighted_rewards[start2:end2]
-                rollout1_data = rollout1_data[:len(rollout1_data)][:len(rollout2_data)]
-                rollout2_data = rollout2_data[:len(rollout1_data)][:len(rollout2_data)]
-                cov = jnp.multiply(rollout1_data, rollout2_data).mean() - rollout1_data.mean()*rollout2_data.mean()
-                penalty += cov
-        penalty = jnp.sqrt(penalty / len(per_instance_importance_weighted_rewards))
+                elif start1 == start2:
+                    penalty += jnp.var(per_instance_importance_weighted_rewards[start1:end1]) / (end1-start1)
+                else:
+                    rollout1_data = per_instance_importance_weighted_rewards[start1:end1]
+                    rollout2_data = per_instance_importance_weighted_rewards[start2:end2]
+                    rollout1_data = rollout1_data[:len(rollout1_data)][:len(rollout2_data)]
+                    rollout2_data = rollout2_data[:len(rollout1_data)][:len(rollout2_data)]
+                    cov = jnp.multiply(rollout1_data, rollout2_data).mean() - rollout1_data.mean()*rollout2_data.mean()
+                    penalty += 2*cov / len(rollout2_data)
+        penalty = jnp.sqrt(penalty)
         return penalty
 
     def crm_loss(self, crm_dataset: CRMDataset,

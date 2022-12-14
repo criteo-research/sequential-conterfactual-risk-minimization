@@ -173,14 +173,14 @@ if __name__ == '__main__':
         scrm_loss, scrm_reward = run_scrm(args, X_train, y_train, X_test, y_test, pi0, samples)
         baseline_rewards, skyline_rewards, baseline_loss, skyline_loss = run_baseskyline(
             args, X_test, y_test, pi0, pistar, samples)
-        loss_results['Baseline'] += [baseline_loss[-1]]
-        loss_results['CRM'] += [crm_loss]
-        loss_results['SCRM'] += [scrm_loss]
-        loss_results['Skyline'] += [skyline_loss[-1]]
-        reward_results['Baseline'] += [baseline_rewards[-1]]
-        reward_results['CRM'] += [crm_reward]
-        reward_results['SCRM'] += [scrm_reward]
-        reward_results['Skyline'] += [skyline_rewards[-1]]
+        loss_results['Baseline'] += [np.round(baseline_loss[-1], 4)]
+        loss_results['CRM'] += [np.round(crm_loss, 4)]
+        loss_results['SCRM'] += [np.round(scrm_loss, 4)]
+        loss_results['Skyline'] += [np.round(skyline_loss[-1], 4)]
+        reward_results['Baseline'] += [np.round(baseline_rewards[-1], 1)]
+        reward_results['CRM'] += [np.round(crm_reward, 1)]
+        reward_results['SCRM'] += [np.round(scrm_reward, 1)]
+        reward_results['Skyline'] += [np.round(skyline_rewards[-1], 1)]
         print("LOSS:", loss_results)
         print("REWARD:", reward_results)
 

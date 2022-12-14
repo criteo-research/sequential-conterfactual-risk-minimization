@@ -91,15 +91,15 @@ class Model(object):
         return penalty
 
     def crm_loss(self, crm_dataset: CRMDataset,
-                 snips = True,
+                 snips=True,
                  lambda_: float = 0,
-                 max_per_instance_ips = 5e4,
-                 max_per_instance_dynamic_log_ips = 50,
+                 max_per_instance_ips=5e4,
+                 max_per_instance_dynamic_log_ips=50,
                  verbose: int = 0,
                  min_pred: float = 1e-20,
                  max_log_ips: float = 50,
                  min_per_instance_importance_weights: float = 1e-20,
-                 compute_ess = False,
+                 compute_ess=False,
                  **args):
         
         n = crm_dataset.features.shape[0]

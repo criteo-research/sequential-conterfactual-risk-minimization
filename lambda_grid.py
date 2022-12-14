@@ -166,17 +166,17 @@ def export_results(args,
                    baseline_rewards, skyline_rewards, crm_reward_by_lambda, scrm_reward_by_lambda):
     pd.DataFrame(data={
         'lambda': args.lambda_grid,
-        'baseline': baseline_loss,
-        'CRM': crm_loss_by_lambda,
-        'S-CRM': scrm_loss_by_lambda,
-        'skyline': skyline_loss,
+        'baseline': np.round(baseline_loss, 4),
+        'CRM': np.round(crm_loss_by_lambda, 4),
+        'S-CRM': np.round(scrm_loss_by_lambda, 4),
+        'skyline': np.round(skyline_loss, 4),
     }).to_latex('loss_by_lambda-%s-%s-%d.tex' % (args.rollout_scheme, args.dataset_name, args.n_rollouts), index=False)
     pd.DataFrame(data={
         'lambda': args.lambda_grid,
-        'baseline': baseline_rewards,
-        'CRM': crm_reward_by_lambda,
-        'S-CRM': scrm_reward_by_lambda,
-        'skyline': skyline_rewards,
+        'baseline': np.round(baseline_rewards, 1),
+        'CRM': np.round(crm_reward_by_lambda, 1),
+        'S-CRM': np.round(scrm_reward_by_lambda, 1),
+        'skyline': np.round(skyline_rewards, 1),
     }).to_latex('cumreward_by_lambda-%s-%s-%d.tex' % (args.rollout_scheme, args.dataset_name, args.n_rollouts), index=False)
     ##
     fig, (ax1, ax2) = plt.subplots(ncols=2, constrained_layout=True, figsize=(16, 4))

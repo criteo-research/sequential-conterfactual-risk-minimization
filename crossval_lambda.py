@@ -45,10 +45,10 @@ def run_crm(args, X_train, y_train, X_test, y_test, pi0, samples):
                 crm_dataset.update_from_supervised_dataset(X, y, sampling_probas, n_samples=args.n_replays)
                 # lambda crossval
                 best_lambda = crm_model.cross_validate_lambda(
-                    crm_dataset, args.n_replays*len(X_train), args.lambda_grid,
+                    crm_dataset, args.n_replays*len(X_train), args.lambda_grid, sequential_dependence=False
                 )
                 # learning
-                crm_model.fit(crm_dataset, lambda_=best_lambda)
+                crm_model.fit(crm_dataset, lambda_=best_lambda, sequential_dependence=False)
             # eval
             crm_losses[i, j] = crm_model.expected_hamming_loss(X_test, y_test)
             crm_rewards[i, j] = crm_reward * len(X)

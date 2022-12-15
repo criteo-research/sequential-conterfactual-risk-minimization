@@ -72,7 +72,10 @@ class Model(object):
 #             jax.debug.print("WARN: propensity overfitting detected")
         return (avg < 2).astype(int)
 
-    def variance_penalty(self, rollout_indices, per_instance_importance_weighted_rewards):
+    def variance_penalty(self, rollout_indices, per_instance_importance_weighted_rewards, sequential_dependence: bool):
+        if not sequential_dependence:
+            return per_instance_importance_weighted_rewards.std() / \
+                jnp.sqrt(len(per_instance_importance_weighted_rewards))
         penalty = 0
         for start1, end1 in rollout_indices:
             for start2, end2 in rollout_indices:
@@ -94,6 +97,7 @@ class Model(object):
     def crm_loss(self, crm_dataset: CRMDataset,
                  snips=True,
                  lambda_: float = 0,
+                 sequential_dependence: bool = True,
                  max_per_instance_ips=5e4,
                  max_per_instance_dynamic_log_ips=50,
                  verbose: int = 0,
@@ -182,7 +186,8 @@ class Model(object):
         # POEM
         if lambda_ != 0:
             total_loss += lambda_ * self.variance_penalty(crm_dataset.rollout_indices,
-                                                           per_instance_importance_weighted_rewards)
+                                                          per_instance_importance_weighted_rewards,
+                                                          sequential_dependence)
 
         result = total_loss / self.k
             
@@ -229,7 +234,7 @@ class Model(object):
         lambdas_to_test = np.array(grid) #* theoretical_lambda
         
         def evaluate_lambda(lambda_):
-            m = Model(beta=np.ones_like(self.beta) * beta_start).fit(train_crm_dataset, lambda_=lambda_)
+            m = Model(beta=np.ones_like(self.beta) * beta_start).fit(train_crm_dataset, lambda_=lambda_, **loss_args)
             loss = m.crm_loss(validation_dataset, lambda_=0, snips=True)#-1 * theoretical_lambda)
             return loss, lambda_
         

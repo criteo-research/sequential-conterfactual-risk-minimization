@@ -65,7 +65,7 @@ def run_crm(args, X_train, y_train, X_test, y_test, pi0, samples):
                     sampling_probas = np.array([_[:, 1] for _ in pi0.predict_proba(X)]).T
                     crm_dataset.update_from_supervised_dataset(X, y, sampling_probas, n_samples=args.n_replays)
                     # learning
-                    crm_model.fit(crm_dataset, lambda_=lambda_)
+                    crm_model.fit(crm_dataset, lambda_=lambda_, sequential_dependence=False)
                 # eval
                 crm_losses[i, j] = crm_model.expected_hamming_loss(X_test, y_test)
                 crm_rewards[i, j] = crm_reward * len(X)

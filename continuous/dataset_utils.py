@@ -42,27 +42,27 @@ def load_warfarin(reduce_dim: int = None, seed:int = 0):
         fh = GaussianRandomProjection(n_components=reduce_dim)
         X = fh.fit_transform(X)
 
-    observed_dose = df['Therapeutic Dose of Warfarin']
+    therapeutic_dose = df['Therapeutic Dose of Warfarin']
 
     # simulating therapeutic dose
     epsilon = np.random.normal(size=len(X))
-    mean_t = np.mean(observed_dose)
-    std_t = np.std(observed_dose)
+    mean_t = np.mean(therapeutic_dose)
+    std_t = np.std(therapeutic_dose)
     zbmi = (df.BMI.values - np.mean(df.BMI.values)) / np.std(df.BMI.values)
     simulated_dose = mean_t + std_t * np.sqrt(.5) * zbmi + epsilon * std_t * np.sqrt(.5)
 
     # rejecting negative doses
     mask = simulated_dose > 0
     X = X[mask, :]
-    observed_dose = observed_dose[mask]
+    therapeutic_dose = therapeutic_dose[mask]
     zbmi = zbmi[mask]
     simulated_dose = simulated_dose[mask]
 
     propensity = norm.pdf((simulated_dose - mean_t - std_t* np.sqrt(.5) * zbmi) / (std_t * np.sqrt(.5)))
 
-    return X, simulated_dose, propensity, observed_dose
+    return X, simulated_dose, propensity, therapeutic_dose
 
 
 if __name__ == '__main__':
-    X, a, p = load_warfarin(reduce_dim=100)
-    print(X.shape, a.shape, p.shape)
+    X, a, p, y = load_warfarin(reduce_dim=100)
+    print(X.shape, a.shape, p.shape, y.shape)

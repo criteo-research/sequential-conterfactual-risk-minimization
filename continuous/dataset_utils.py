@@ -11,7 +11,7 @@ def load_warfarin(reduce_dim: int = None, seed:int = 0):
 
     df = pd.read_csv('warfrin.csv')
 
-    # select patients where stabel dose has been reached & recorded
+    # select patients where stable dose has been reached & recorded
     df = df[
         ~np.isnan(df['Subject Reached Stable Dose of Warfarin']) &
         ~np.isnan(df['Therapeutic Dose of Warfarin']) &
@@ -49,14 +49,20 @@ def load_warfarin(reduce_dim: int = None, seed:int = 0):
     mean_t = np.mean(observed_dose)
     std_t = np.std(observed_dose)
     zbmi = (df.BMI.values - np.mean(df.BMI.values)) / np.std(df.BMI.values)
-    action = mean_t + std_t * np.sqrt(.5) * zbmi + epsilon * std_t * np.sqrt(.5)
+    simulated_dose = mean_t + std_t * np.sqrt(.5) * zbmi + epsilon * std_t * np.sqrt(.5)
 
     # rejecting negative doses
-    mask = action > 0
+    mask = simulated_dose > 0
     X = X[mask, :]
+    observed_dose = observed_dose[mask]
     zbmi = zbmi[mask]
-    action = action[mask]
+    simulated_dose = simulated_dose[mask]
 
-    propensity = norm.pdf((action - mean_t - std_t* np.sqrt(.5) * zbmi) / (std_t * np.sqrt(.5)))
+    propensity = norm.pdf((simulated_dose - mean_t - std_t* np.sqrt(.5) * zbmi) / (std_t * np.sqrt(.5)))
 
-    return X, action, propensity
+    return X, simulated_dose, propensity, observed_dose
+
+
+if __name__ == '__main__':
+    X, a, p = load_warfarin(reduce_dim=100)
+    print(X.shape, a.shape, p.shape)

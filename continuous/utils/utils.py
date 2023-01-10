@@ -29,7 +29,7 @@ class LossHistory(object):
             'CRM loss: %.5f' % self.crm_loss[-1],
             'Online loss: %.5f' % self.online_loss[-1],
             '|theta|=%.2f' % np.sqrt((self.betas[-1] ** 2).sum()),
-            'n=%d' % sum(self.n_samples),
+            'n=%d' % sum(self.n_samples[:-1]),
             '>',
             file=sys.stderr
         )
@@ -40,6 +40,25 @@ def get_logging_data(n_samples, dataset):
     logging_data = actions, contexts, losses, propensities
 
     return logging_data
+
+
+def dataset_split(contexts, actions, losses, propensities, random_seed, ratio=0.25):
+    rng = np.random.RandomState(random_seed)
+    idx = rng.permutation(contexts.shape[0])
+    contexts, actions, losses, propensities = contexts[idx], actions[idx], losses[idx], \
+                                              propensities[idx]
+
+    size = int(contexts.shape[0] * ratio)
+    contexts_train, contexts_valid = contexts[:size, :], contexts[size:, :]
+    actions_train, actions_valid = actions[:size], actions[size:]
+    losses_train, losses_valid = losses[:size], losses[size:]
+    propensities_train, propensities_valid = propensities[:size], propensities[size:]
+    #     potentials_train, potentials_valid = potentials[:size], potentials[size:]
+
+    logged_train = actions_train, contexts_train, losses_train, propensities_train
+    logged_valid = actions_valid, contexts_valid, losses_valid, propensities_valid
+
+    return logged_train, logged_valid
 
 def update_past_data(data, samples):
     return np.hstack([data, samples])
@@ -56,8 +75,8 @@ def online_evaluation(optimized_param, contextual_modelling, dataset, random_see
         losses += [dataset.get_losses_from_actions(potentials, sampled_actions)]
 
     losses_array = np.stack(losses, axis=0)
-    var_pi = np.mean(np.var(losses_array, axis=0))
-    var_context = np.var(np.mean(losses_array, axis=1))
+    # var_pi = np.mean(np.var(losses_array, axis=0))
+    # var_context = np.var(np.mean(losses_array, axis=1))
     return np.mean(losses_array), np.std(np.mean(losses_array, axis=0))
 
 

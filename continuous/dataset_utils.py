@@ -38,11 +38,11 @@ def load_warfarin(reduce_dim: int = None, seed:int = 0):
     X = np.hstack([X_categ, X_conti])
 
     if reduce_dim:
-        # print("reducing dimension for Warfarin dataset")
+        print("reducing dimension for Warfarin dataset")
         fh = GaussianRandomProjection(n_components=reduce_dim)
         X = fh.fit_transform(X)
 
-    therapeutic_dose = df['Therapeutic Dose of Warfarin']
+    therapeutic_dose = df['Therapeutic Dose of Warfarin'].values
 
     # simulating therapeutic dose
     epsilon = np.random.normal(size=len(X))
@@ -64,9 +64,5 @@ def load_warfarin(reduce_dim: int = None, seed:int = 0):
 
 
 if __name__ == '__main__':
-    l = []
-    for _ in range(30):
-        X, a, p, y = load_warfarin(reduce_dim=100, seed=_)
-        pi0_loss = np.mean(np.maximum(np.abs(y - a) - 0.1 * y, 0.))
-        l += [pi0_loss]
-    print(np.mean(l))
+    X, a, p, y = load_warfarin(reduce_dim=100)
+    print(X.shape, a.shape, p.shape, y.shape)

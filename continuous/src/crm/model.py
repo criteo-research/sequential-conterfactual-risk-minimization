@@ -12,7 +12,7 @@ class Model(object):
         d = dataset.dimension
         if self.name == 'linear':
             #             return self.rng.normal(scale=0.1, size=d + 2)
-            return self.rng.normal(scale=dataset.parameter_scale, size=d + 1)
+            return np.concatenate([np.array([30]), self.rng.normal(scale=dataset.parameter_scale, size=d)])
 
         elif self.name == 'polynomial':
             return self.rng.normal(scale=dataset.parameter_scale, size=d ** 2 + d + 1)
@@ -22,7 +22,7 @@ class Model(object):
     def _linear_modelling(self, parameter, features):
         intercept_coeff, mean_coeff = parameter[0], parameter[1:]
         mean = jnp.dot(features, mean_coeff) + intercept_coeff
-        return mean
+        return intercept_coeff
 
     def _polynomial_modelling(self, parameter, features):
         n = features.shape[1]

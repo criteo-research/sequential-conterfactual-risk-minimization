@@ -44,7 +44,7 @@ def run_crm(args, X_train, y_train, X_test, y_test, pi0, samples):
                 sampling_probas = np.array([_[:, 1] for _ in pi0.predict_proba(X)]).T
                 crm_dataset.update_from_supervised_dataset(X, y, sampling_probas, n_samples=args.n_replays)
                 # lambda crossval
-                best_lambda = crm_model.cross_validate_lambda(
+                best_lambda = crm_model.autotune_lambda(
                     crm_dataset, args.n_replays*len(X_train), args.lambda_grid, sequential_dependence=False
                 )
                 # learning
@@ -88,7 +88,7 @@ def run_scrm(args, X_train, y_train, X_test, y_test, pi0, samples):
                     sampling_probas = scrm_model.predict_proba(X, y)
                 scrm_dataset.update_from_supervised_dataset(X, y, sampling_probas, n_samples=args.n_replays)
                 # lambda crossval
-                best_lambda = scrm_model.cross_validate_lambda(
+                best_lambda = scrm_model.autotune_lambda(
                     scrm_dataset, args.n_replays * len(X_train), args.lambda_grid,
                 )
                 # learning

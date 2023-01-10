@@ -4,6 +4,9 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 
+# from jax.config import config as jax_config
+# jax_config.update("jax_debug_nans", True)
+
 from joblib import Parallel, delayed
 
 from dataset_utils import load_dataset
@@ -29,7 +32,8 @@ def rollout_indices(data_size, rollout_scheme, n_rollouts, min_samples=100):
 
 
 def run_crm(X_train, y_train, X_test, y_test, pi0, samples, n_reruns, n_replays, lambda_grid,
-            scrm: bool = False, lambda_: float = .01):
+            scrm: bool = False,
+            autotune_lambda: bool = False, lambda_: float = .01, ips_ix: bool = False, truevar: bool = False):
     # lambda_ is None => autotune
 
     crm_losses = []
@@ -53,13 +57,14 @@ def run_crm(X_train, y_train, X_test, y_test, pi0, samples, n_reruns, n_replays,
                     sampling_probas = crm_model.predict_proba(X, y)
                 crm_dataset.update_from_supervised_dataset(X, y, sampling_probas, n_samples=n_replays)
                 # xval lambda if needed
-                if lambda_ is None:
-                    lambda_ = crm_model.cross_validate_lambda(
-                        crm_dataset, n_replays * len(X_train), lambda_grid,
+                if autotune_lambda:
+                    lambda_ = Model.autotune_lambda(
+                        crm_dataset, crm_model.d, crm_model.k, grid=lambda_grid,
+                        sequential_dependence=truevar, ips_ix=ips_ix, snips=not ips_ix
                     )
                 # learning
                 if scrm or j == len(samples) - 1:
-                    crm_model.fit(crm_dataset, lambda_=lambda_, sequential_dependence=False)
+                    crm_model.fit(crm_dataset, lambda_=lambda_, sequential_dependence=truevar, ips_ix=ips_ix, snips=not ips_ix)
             # next round
             start = end
 
@@ -81,6 +86,9 @@ if __name__ == '__main__':
     parser.add_argument('--lambda-grid', '-lg', default=DEFAULT_LAMBDA_GRID, type=parse_lambdas)
     parser.add_argument('--to', '-to', default='')
     parser.add_argument('--n-jobs', '-j', default=1, type=int)
+    parser.add_argument('--crm', default=False, action='store_true')
+    parser.add_argument('--truevar', default=False, action='store_true')
+    parser.add_argument('--ips-ix', default=False, action='store_true')
 
     args = parser.parse_args()
 
@@ -98,27 +106,33 @@ if __name__ == '__main__':
         def _run(l):
             return run_crm(X_train, y_train, X_test, y_test, pi0, samples,
                            n_reruns=args.n_reruns, n_replays=args.n_replays, lambda_grid=args.lambda_grid,
-                           lambda_=l, scrm=True)
-
-        all_losses_stds = Parallel(n_jobs=args.n_jobs)(delayed(_run)(l) for l in args.lambda_grid)
-        scrm_best_loss_a_posteriori_mean, scrm_best_loss_a_posteriori_std = sorted(all_losses_stds)[0]
-        print('SCRM best loss a posteriori: %.3f +/- %.3f' % (
-            scrm_best_loss_a_posteriori_mean, scrm_best_loss_a_posteriori_std)
-        )
+                           autotune_lambda=l is None, lambda_=l, scrm=not args.crm,
+                           truevar=args.truevar, ips_ix=args.ips_ix)
 
         scrm_loss_autotuned_lambda_mean, scrm_loss_autotuned_lambda_std = _run(None)
-        print('SCRM loss w. autotune lamda: %.3f +/- %.3f' % (
+        print('SCRM loss w. autotune lamda: %.5f +/- %.5f' % (
             scrm_loss_autotuned_lambda_mean, scrm_loss_autotuned_lambda_std)
         )
 
-        results['dataset'] += [dataset]
-        results['Baseline'] += ['%.3f' % stochastic_hamming_loss(pi0, X_test, y_test)]
-        results['SCRM (MAP)'] += ['%.3f \\pm %.3f' % (scrm_best_loss_a_posteriori_mean, scrm_best_loss_a_posteriori_std)]
-        results['SCRM (auto-tune)'] += ['%.3f \\pm %.3f' % (scrm_loss_autotuned_lambda_mean, scrm_loss_autotuned_lambda_std)]
-        results['Skyline'] += ['%.3f' % stochastic_hamming_loss(pistar, X_test, y_test)]
+        all_losses_stds = Parallel(n_jobs=args.n_jobs)(delayed(_run)(l) for l in args.lambda_grid)
+        print('MAP:', sorted(zip(all_losses_stds, args.lambda_grid)))
+        scrm_best_loss_a_posteriori_mean, scrm_best_loss_a_posteriori_std = sorted(all_losses_stds)[0]
+        print('SCRM best loss a posteriori: %.5f +/- %.5f' % (
+            scrm_best_loss_a_posteriori_mean, scrm_best_loss_a_posteriori_std)
+        )
 
-    pd.DataFrame(data=results).T.to_latex(
+        results['dataset'] += [dataset]
+        results['Baseline'] += ['$%.5f$' % stochastic_hamming_loss(pi0, X_test, y_test)]
+        results['SCRM (MAP)'] += ['$%.5f \pm %.5f$' % (scrm_best_loss_a_posteriori_mean, scrm_best_loss_a_posteriori_std)]
+        results['SCRM (auto-tune)'] += ['$%.5f \pm %.5f$' % (scrm_loss_autotuned_lambda_mean, scrm_loss_autotuned_lambda_std)]
+        results['Skyline'] += ['$%.5f$' % stochastic_hamming_loss(pistar, X_test, y_test)]
+
+    df = pd.DataFrame(data=results)
+    df.to_latex(
         'lambda_heuristic_discrete-%s-rs_%s-ro_%d-rr_%d.tex' % (
             args.to, args.rollout_scheme, args.n_rollouts, args.n_reruns
-        ), index=False
+        ), index=False, column_format='r', escape=False
     )
+    print('-'*80)
+    print(df)
+    print('-'*80)

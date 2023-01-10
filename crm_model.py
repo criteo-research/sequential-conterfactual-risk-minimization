@@ -60,7 +60,7 @@ class Model(object):
         y_invert = 1 - y
         invert_probas = self.predict_proba(X, y_invert)
         return invert_probas.sum() / (self.k * y.shape[0])
-    
+
     def check_propensity_overfitting(self, ips_weights):
         std = jnp.std(ips_weights)
         n = ips_weights.shape[0]
@@ -79,23 +79,26 @@ class Model(object):
         penalty = 0
         for start1, end1 in rollout_indices:
             for start2, end2 in rollout_indices:
-                if start1 < start2:
+                if start1 > start2:
                     continue
                 elif start1 == start2:
-                    penalty += jnp.var(per_instance_importance_weighted_rewards[start1:end1])
+                    seqvar = jnp.var(per_instance_importance_weighted_rewards[start1:end1])
+                    penalty += seqvar
                 else:
                     rollout1_data = per_instance_importance_weighted_rewards[start1:end1]
                     rollout2_data = per_instance_importance_weighted_rewards[start2:end2]
                     paired_rollout1_data = rollout1_data[:len(rollout1_data)][:len(rollout2_data)]
                     paired_rollout2_data = rollout2_data[:len(rollout1_data)][:len(rollout2_data)]
-                    cov = jnp.multiply(paired_rollout1_data, paired_rollout2_data).mean() - \
-                          rollout1_data.mean()*rollout2_data.mean()
+                    cov = jnp.cov(paired_rollout1_data[:,0], paired_rollout2_data[:,0])[0, 1]
                     penalty += 2*len(rollout1_data)*len(rollout2_data)*cov
-        penalty = jnp.sqrt(penalty) / len(per_instance_importance_weighted_rewards)
+        # jax.debug.print('p:{}', penalty)
+        penalty = jnp.clip(penalty, 0, 10000)
+        penalty = jnp.sqrt(penalty / len(per_instance_importance_weighted_rewards)**2) / jnp.sqrt(len(per_instance_importance_weighted_rewards))
         return penalty
 
     def crm_loss(self, crm_dataset: CRMDataset,
                  snips=True,
+                 ips_ix=False,
                  lambda_: float = 0,
                  sequential_dependence: bool = True,
                  max_per_instance_ips=5e4,
@@ -123,7 +126,11 @@ class Model(object):
                                     jnp.exp(per_instance_log_predictions).max())
 
         # pi0
-        per_instance_log_propensities = jnp.log(crm_dataset.propensities).sum(axis=1)
+        if ips_ix:
+            alpha = 1/n
+            per_instance_log_propensities = jnp.log(crm_dataset.propensities + alpha * predictions).sum(axis=1)
+        else:
+            per_instance_log_propensities = jnp.log(crm_dataset.propensities).sum(axis=1)
         if verbose > 1: 
             jax.debug.print('\tlog props: {} [{} ; {}]', 
                             per_instance_log_propensities.shape,
@@ -167,7 +174,9 @@ class Model(object):
             self.k - crm_dataset.rewards,
             per_instance_importance_weights
         )
-        if verbose > 1: jax.debug.print('\tIPS-R: {} - {}', 
+        if ips_ix:
+            per_instance_importance_weighted_rewards = per_instance_importance_weighted_rewards - 1.
+        if verbose > 1: jax.debug.print('\tIPS-R: {} - {}',
                                         per_instance_importance_weighted_rewards.min(),
                                         per_instance_importance_weighted_rewards.max())
         
@@ -177,7 +186,7 @@ class Model(object):
             importance_weights_sum_of_squares = (per_instance_importance_weights ** 2).sum()
             effective_sample_size = squared_importance_weights_sum / importance_weights_sum_of_squares / n
         
-        # SNIPS
+        # SNIPS or IPS
         if snips:
             total_loss = per_instance_importance_weighted_rewards.sum() / per_instance_importance_weights.sum()
         else:
@@ -223,26 +232,31 @@ class Model(object):
     DEFAULT_GRID = [1e-3, 1e-2, 1e-1, 0, 1, 1e2, 
                     -1e-3, -1e-2, -1e-1, -1, -1e2]
 
-    def cross_validate_lambda(self, crm_dataset, n_final_samples: int, 
-                              grid=DEFAULT_GRID, verbose: int = 0, beta_start: float = 0, 
-                              seed: int = 0, shuffle=True,
-                              n_jobs=5, **loss_args):
+    @staticmethod
+    def autotune_lambda(crm_dataset,
+                        d: int, k: int,
+                        grid=DEFAULT_GRID, verbose: int = 0,
+                        seed: int = 0, shuffle: bool = True, folds: int = 3,
+                        n_jobs=5, **loss_args):
         loss_args['verbose'] = verbose
 
-        train_crm_dataset, validation_dataset = crm_dataset.split(seed=seed, shuffle=shuffle)
-        # theoretical_lambda = self.theoretical_exploration_bonus(len(crm_dataset), n_final_samples)
-        lambdas_to_test = np.array(grid) #* theoretical_lambda
-        
-        def evaluate_lambda(lambda_):
-            m = Model(beta=np.ones_like(self.beta) * beta_start).fit(train_crm_dataset, lambda_=lambda_, **loss_args)
-            loss = m.crm_loss(validation_dataset, lambda_=0, snips=True)#-1 * theoretical_lambda)
-            return loss, lambda_
-        
-        best_loss, best_lambda = sorted(Parallel(n_jobs=n_jobs)(
-            delayed(evaluate_lambda)(l) for l in lambdas_to_test)
-        )[0]
-        return best_lambda
-    
+        def eval_one_lambda(lambda_: float, seed: int):
+            train_crm_dataset, validation_dataset = crm_dataset.split(seed=seed, shuffle=shuffle)
+            m = Model.null_model(d, k).fit(train_crm_dataset, lambda_=lambda_, **loss_args)
+            loss = np.asarray([m.crm_loss(validation_dataset, lambda_=0, snips=True)])
+            return loss[0]
+
+        losses = []
+        for lambda_ in grid:
+            mean_loss = np.mean(np.asarray(
+                Parallel(n_jobs=n_jobs)(delayed(eval_one_lambda)(lambda_, seed+_*10**4) for _ in range(folds))
+            ))
+            losses += [mean_loss]
+
+        sorted_results = sorted(zip(losses, grid))
+        jax.debug.print('AT:{}', sorted_results)
+        return sorted_results[0][1]
+
     
 class EpsilonGreedyModel(object):
     

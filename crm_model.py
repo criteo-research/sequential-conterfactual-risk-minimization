@@ -211,7 +211,7 @@ class Model(object):
 
         optimizer = jaxopt.ScipyMinimize(method='L-BFGS-B', fun=_loss, 
                                          maxiter=loss_args.get('maxiter', 1000), 
-                                         tol=loss_args.get('tol',1e-6))
+                                         tol=loss_args.get('tol', 1e-6))
         solution = optimizer.run(self.beta)
         self.beta = solution.params
 

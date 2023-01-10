@@ -4,8 +4,10 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 
+from joblib import Parallel, delayed
+
 from dataset_utils import load_dataset
-from baselines_skylines import make_baselines_skylines
+from baselines_skylines import make_baselines_skylines, stochastic_hamming_loss
 from crm_dataset import CRMDataset
 from crm_model import Model
 
@@ -77,6 +79,8 @@ if __name__ == '__main__':
     parser.add_argument('--rollout-scheme', '-rs', default='linear', choices=('linear', 'doubling'))
     def parse_lambdas(x): return [float(_) for _ in x.split(',')]
     parser.add_argument('--lambda-grid', '-lg', default=DEFAULT_LAMBDA_GRID, type=parse_lambdas)
+    parser.add_argument('--to', '-to', default='')
+    parser.add_argument('--n-jobs', '-j', default=1, type=int)
 
     args = parser.parse_args()
 
@@ -86,34 +90,35 @@ if __name__ == '__main__':
         print("DATASET:", dataset)
 
         X_train, y_train, X_test, y_test, labels = load_dataset(dataset)
-        pi0, _ = make_baselines_skylines(dataset, X_train, y_train, n_jobs=4)
+        pi0, pistar = make_baselines_skylines(dataset, X_train, y_train, n_jobs=4)
 
         samples = rollout_indices(len(X_train), args.rollout_scheme, args.n_rollouts)
         print("rollout @", samples)
 
-        scrm_best_loss_a_posteriori_mean, scrm_best_loss_a_posteriori_std = sorted([
-            run_crm(X_train, y_train, X_test, y_test, pi0, samples,
-                    n_reruns=args.n_reruns, n_replays=args.n_replays, lambda_grid=args.lambda_grid,
-                    lambda_=l, scrm=True)
-            for l in args.lambda_grid
-        ])[0]
+        def _run(l):
+            return run_crm(X_train, y_train, X_test, y_test, pi0, samples,
+                           n_reruns=args.n_reruns, n_replays=args.n_replays, lambda_grid=args.lambda_grid,
+                           lambda_=l, scrm=True)
+
+        all_losses_stds = Parallel(n_jobs=args.n_jobs)(delayed(_run)(l) for l in args.lambda_grid)
+        scrm_best_loss_a_posteriori_mean, scrm_best_loss_a_posteriori_std = sorted(all_losses_stds)[0]
         print('SCRM best loss a posteriori: %.3f +/- %.3f' % (
             scrm_best_loss_a_posteriori_mean, scrm_best_loss_a_posteriori_std)
         )
 
-        scrm_loss_autotuned_lambda_mean, scrm_loss_autotuned_lambda_std = run_crm(
-            X_train, y_train, X_test, y_test, pi0, samples,
-            n_reruns=args.n_reruns, n_replays=args.n_replays, lambda_grid=args.lambda_grid,
-            lambda_=None, scrm=True
-        )
+        scrm_loss_autotuned_lambda_mean, scrm_loss_autotuned_lambda_std = _run(None)
         print('SCRM loss w. autotune lamda: %.3f +/- %.3f' % (
             scrm_loss_autotuned_lambda_mean, scrm_loss_autotuned_lambda_std)
         )
 
         results['dataset'] += [dataset]
-        results['SCRM (\lambda^*)'] += ['%.3f \pm %.3f' (scrm_best_loss_a_posteriori_mean, scrm_best_loss_a_posteriori_std)]
-        results['SCRM (\hat{\lambda})'] += ['%.3f \pm %.3f' (scrm_loss_autotuned_lambda_mean, scrm_loss_autotuned_lambda_std)]
+        results['Baseline'] += ['%.3f' % stochastic_hamming_loss(pi0, X_test, y_test)]
+        results['SCRM (MAP)'] += ['%.3f \\pm %.3f' % (scrm_best_loss_a_posteriori_mean, scrm_best_loss_a_posteriori_std)]
+        results['SCRM (auto-tune)'] += ['%.3f \\pm %.3f' % (scrm_loss_autotuned_lambda_mean, scrm_loss_autotuned_lambda_std)]
+        results['Skyline'] += ['%.3f' % stochastic_hamming_loss(pistar, X_test, y_test)]
 
     pd.DataFrame(data=results).T.to_latex(
-        'lambda_heuristic_discrete-%s-%d.tex' % (args.rollout_scheme, args.n_rollouts), index=False
+        'lambda_heuristic_discrete-%s-rs_%s-ro_%d-rr_%d.tex' % (
+            args.to, args.rollout_scheme, args.n_rollouts, args.n_reruns
+        ), index=False
     )

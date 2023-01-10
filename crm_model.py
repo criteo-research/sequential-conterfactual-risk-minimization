@@ -240,7 +240,7 @@ class Model(object):
         
         best_loss, best_lambda = sorted(Parallel(n_jobs=n_jobs)(
             delayed(evaluate_lambda)(l) for l in lambdas_to_test)
-        )[-1]
+        )[0]
         return best_lambda
     
     

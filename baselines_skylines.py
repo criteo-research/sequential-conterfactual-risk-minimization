@@ -39,9 +39,19 @@ vrcrm_paper_results = {
 }
 
 
-def stochastic_hamming_loss(pi, X_test, y_test):
-    predictions = pi.predict_proba(X_test)
-    predictions = np.array([_[:,1] for _ in predictions]).T
+def epsilon_greedy_predict_proba(clf, X, epsilon):
+    predictions = np.array([_[:,1] for _ in clf.predict_proba(X)]).T
+    uniform_predictions = .5 * np.ones_like(predictions)
+    predictions = (1 - epsilon) * predictions + epsilon * uniform_predictions
+    return predictions
+
+
+def stochastic_hamming_loss(pi, X_test, y_test, epsilon: float = 0):
+    if epsilon == 0.:
+        predictions = pi.predict_proba(X_test)
+        predictions = np.array([_[:,1] for _ in predictions]).T
+    else:
+        predictions = epsilon_greedy_predict_proba(pi, X_test, epsilon)
     idx = np.where(y_test == 0)
     fp = predictions[idx].sum()
     idx = np.where(y_test == 1)
@@ -93,31 +103,50 @@ def result_table(dataset_name,
         vrcrm_stats["pi*"]/y_test.shape[1], 
         skyline
     ))
-    
-exploration_bonus = {'scene':.025, 'yeast':2, 'tmc2007':4}
-    
 
-def epsilon_greedy_predict_proba(clf, X, epsilon):
-    predictions = np.array([_[:,1] for _ in clf.predict_proba(X)]).T 
-    uniform_predictions = .5 * np.ones_like(predictions)
-    predictions = (1 - epsilon) * predictions + epsilon * uniform_predictions
-    return predictions
-    
+
+exploration_bonus = {'scene':.025, 'yeast':2, 'tmc2007':4}
+
+
+class OneClassRobustLogisticRegression(LogisticRegression):
+    def fit(self, X, y, sample_weight=None):
+        try:
+            LogisticRegression.fit(self, X, y, sample_weight)
+            return self
+        except ValueError as exc:
+            print("WARN: training set has only positive examples")
+            self.coef_ = np.zeros(((1, X.shape[1])))
+            return self
+
+    def predict_proba(self, X):
+        if len(self.classes_) == 1:
+            return np.ones((X.shape[0], 2))
+        return LogisticRegression.predict_proba(self, X)
+
         
-def make_baselines_skylines(dataset_name, X_train, y_train, bonus: float = None, mlp=False, n_jobs=4):
+def make_baselines_skylines(dataset_name, X_train, y_train, bonus: float = None, mlp=False, n_jobs=4,
+                            skip_skyline: bool = False):
     if mlp:
         base_clf = MLPClassifier(hidden_layer_sizes=(500, 100, 40, 10,))
         pistar = MultiOutputClassifier(base_clf, n_jobs=n_jobs)
     else:
         base_clf = LogisticRegressionCV(max_iter=10000, n_jobs=6)            
         pistar = MultiOutputClassifier(base_clf, n_jobs=n_jobs)
-    pistar.fit(X_train, y_train)
-    
+    if skip_skyline:
+        pistar = None
+    else:
+        try:
+            pistar.fit(X_train, y_train)
+        except ValueError as exc:
+            base_clf = OneClassRobustLogisticRegression()
+            pistar = MultiOutputClassifier(base_clf, n_jobs=n_jobs)
+            pistar.fit(X_train, y_train)
+
     n_0 = int(len(X_train)*.05)
     # print('learning pi0 on', n_0, 'data points')
     X_0 = X_train[-n_0:,:]
     y_0 = y_train[-n_0:,:]
-    pi0 = MultiOutputClassifier(LogisticRegression(), n_jobs=n_jobs)
+    pi0 = MultiOutputClassifier(OneClassRobustLogisticRegression(), n_jobs=n_jobs)
     pi0.fit(X_0, y_0)
     
     # making sure every class has non-zero proba and pi0 is not too good

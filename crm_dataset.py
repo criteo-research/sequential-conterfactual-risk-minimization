@@ -4,7 +4,9 @@ from sklearn.model_selection import train_test_split
 
 
 class CRMDataset(object):
-    def __init__(self):
+    def __init__(self, seed: int = 0):
+
+        self.rng = np.random.default_rng(seed)
 
         self.propensities_ = []
         self.actions_ = []
@@ -73,7 +75,7 @@ class CRMDataset(object):
         assert len(X) == len(y) == len(probas), (len(X) , len(y) , len(probas))
         
         for _ in range(n_samples):
-            actions = (np.random.uniform(size=(n, k)) < probas).astype(int)
+            actions = (self.rng.uniform(size=(n, k)) < probas).astype(int)
             assert actions.shape == (n, k)
             self.actions_ += [actions]
             zero_chosen = np.where(actions == 0)

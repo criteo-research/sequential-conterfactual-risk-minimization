@@ -5,6 +5,7 @@ from sklearn.random_projection import GaussianRandomProjection
 from sklearn.preprocessing import MultiLabelBinarizer, StandardScaler
 from sklearn.preprocessing import add_dummy_feature
 
+
 def load_dataset(dataset_name, test_size=.25, seed=0, add_intercept=True, scale=False, reduce_dim: int = None):
     X_train, y_train_ = load_svmlight_file(dataset_name+'_train.svm', multilabel=True)
     X_test, y_test_ = load_svmlight_file(dataset_name+'_test.svm', multilabel=True)

@@ -38,8 +38,8 @@ class Model(object):
         
     @staticmethod
     def random_model(d, k, seed=None):
-        np.random.seed(seed)
-        beta = jnp.array(np.random.normal(size=(d, k)))
+        rng = np.random.default_rng(seed)
+        beta = jnp.array(rng.normal(size=(d, k)))
         return Model(beta)
     
     @staticmethod
@@ -254,7 +254,7 @@ class Model(object):
             losses += [mean_loss]
 
         sorted_results = sorted(zip(losses, grid))
-        jax.debug.print('AT:{}', sorted_results)
+        # jax.debug.print('AT:{}', sorted_results)
         return sorted_results[0][1]
 
     
@@ -264,8 +264,17 @@ class EpsilonGreedyModel(object):
         self.epsilon = epsilon
         self.model = Model(beta)
         self.uniform_model = Model(np.zeros_like(beta))
-        
-    def predict_proba(self, features, actions, randomize=False):
+
+    @property
+    def d(self):
+        return self.model.d
+
+    @property
+    def k(self):
+        return self.model.k
+
+
+    def predict_proba(self, features, actions, randomize=True):
         predictions = self.model.predict_proba(features, actions)
         if randomize:
             uniform_predictions = self.uniform_model.predict_proba(features, actions)
@@ -273,8 +282,10 @@ class EpsilonGreedyModel(object):
         return predictions
     
     def expected_hamming_loss(self, X, y):
-        return self.model.expected_hamming_loss(X,y)
-    
+        y_invert = 1 - y
+        invert_probas = self.predict_proba(X, y_invert)
+        return invert_probas.sum() / (self.model.k * y.shape[0])
+
     def fit(self, *args, **kwargs):
         return self.model.fit(*args, **kwargs)
     

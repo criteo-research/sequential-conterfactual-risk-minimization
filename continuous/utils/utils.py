@@ -13,12 +13,16 @@ class LossHistory(object):
         self.n_samples = []
         self.n_actions = []
         self.cumulated_loss = []
+        self.losses_baseline = []
+        self.losses_skyline = []
         self.regret = []
 
-    def update(self, beta, online_loss, regret, crm_loss, cumulated_losses, n_samples):
+    def update(self, beta, online_loss, regret, crm_loss, cumulated_losses, losses_baseline, losses_skyline, n_samples):
         self.betas += [beta]
         self.online_loss += [online_loss]
         self.crm_loss += [crm_loss]
+        self.losses_baseline += [losses_baseline]
+        self.losses_skyline += [losses_skyline]
         self.n_samples += [n_samples]
         self.cumulated_loss += [np.sum(self.cumulated_loss) + cumulated_losses]
         self.regret += [np.sum(self.regret) + regret * n_samples]
@@ -75,9 +79,16 @@ def online_evaluation(optimized_param, contextual_modelling, dataset, random_see
         losses += [dataset.get_losses_from_actions(potentials, sampled_actions)]
 
     losses_array = np.stack(losses, axis=0)
-    # var_pi = np.mean(np.var(losses_array, axis=0))
-    # var_context = np.var(np.mean(losses_array, axis=1))
-    return np.mean(losses_array), np.std(np.mean(losses_array, axis=0))
+    return np.mean(losses_array)
+
+def skyline_evaluation(pi_star_determinist, dataset):
+
+    contexts, potentials = dataset.test_data
+    predictions = pi_star_determinist.predict(contexts)
+
+    losses = dataset.get_losses_from_actions(potentials, predictions)
+
+    return np.mean(losses)
 
 
 def start_experiment(random_seed, dataset, name):

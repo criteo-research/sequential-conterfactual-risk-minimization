@@ -19,10 +19,10 @@ class BatchKernelUCB:
 
         """
         self.rng = np.random.RandomState(123)
-        self.reg_lambda = settings['reg_lambda']
+        self.reg_lambda = settings['lambda']
         self.kernel = kernel
         self.settings = settings
-        self.name = 'Batch-KUCB'
+        self.name = 'BKUCB'
         self.beta_t = 0.1
 
     def get_story_data(self):

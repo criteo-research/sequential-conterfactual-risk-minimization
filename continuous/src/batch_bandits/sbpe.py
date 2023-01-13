@@ -18,7 +18,7 @@ class SBPE:
 
         """
         self.rng = np.random.RandomState(123)
-        self.reg_lambda = settings['reg_lambda']
+        self.reg_lambda = settings['lambda']
         self.kernel = kernel
         self.settings = settings
         self.name = 'SBPE'

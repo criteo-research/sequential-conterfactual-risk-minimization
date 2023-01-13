@@ -150,7 +150,7 @@ class Advertising(Dataset):
                           -0.1)
 
     def get_optimal_parameter(self, contextual_modelling):
-        features, potentials = self.sample_data(10000)
+        features, potentials = self.sample_data(10000, 0)
         pistar_determinist = RidgeCV(alphas=[1e-3, 1e-2, 1e-1, 1])
 
         if contextual_modelling == 'linear':
@@ -161,7 +161,7 @@ class Advertising(Dataset):
         else:
             return
         pistar_determinist.fit(embedding, potentials)
-        return np.concatenate([np.array([pistar_determinist.intercept_]), pistar_determinist.coef_])
+        return np.concatenate([np.array([pistar_determinist.intercept_]), pistar_determinist.coef_]), pistar_determinist
 
 
 class Pricing(Dataset):
@@ -245,7 +245,7 @@ class Pricing(Dataset):
         return - (actions * (self.a(z_bar) - self.b(z_bar) * actions) + epsilon_noise)
 
     def get_optimal_parameter(self, contextual_modelling):
-        z, z_bar = self.sample_data(10000)
+        z, z_bar = self.sample_data(10000, 0)
         pistar_determinist = RidgeCV(alphas=[1e-3, 1e-2, 1e-1, 1])
         optimal_prices = self.a(z_bar) / (2 * self.b(z_bar))
         if contextual_modelling == 'linear':
@@ -256,7 +256,7 @@ class Pricing(Dataset):
         else:
             return
         pistar_determinist.fit(embedding, optimal_prices)
-        return np.concatenate([np.array([pistar_determinist.intercept_]), pistar_determinist.coef_])
+        return np.concatenate([np.array([pistar_determinist.intercept_]), pistar_determinist.coef_]), pistar_determinist
 
 
 class WarfarinDataset(Dataset):

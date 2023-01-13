@@ -3,11 +3,11 @@ import numpy as np
 from scipy.stats import norm
 
 from utils.dataset import get_dataset_by_name
-from utils.utils import LossHistory, online_evaluation, start_experiment, get_logging_data, update_past_data, dataset_split
+from utils.utils import LossHistory, online_evaluation, skyline_evaluation, start_experiment, get_logging_data, update_past_data, dataset_split
 from src.crm.model import Model
 from src.crm.estimator import Estimator, optimize
 
-def repeated_crm_experiment(random_seed, dataset_name, settings, lambda_grid):
+def repeated_crm_experiment(random_seed, dataset_name, settings, lambda_grid=None):
     dataset = get_dataset_by_name(dataset_name, random_seed)
 
     start_experiment(random_seed, dataset, 'CRM')
@@ -17,8 +17,8 @@ def repeated_crm_experiment(random_seed, dataset_name, settings, lambda_grid):
     estimator = Estimator(contextual_modelling, dataset.logging_scale)
     crm_loss_history = LossHistory("CRM")
 
-    # optimal_theta = dataset.get_optimal_parameter(settings['contextual_modelling'])
-    # optimal_loss, _ = online_evaluation(optimal_theta, contextual_modelling, dataset, random_seed)
+    optimal_theta, pistar_determinist = dataset.get_optimal_parameter(settings['contextual_modelling'])
+    optimal_loss = online_evaluation(optimal_theta, contextual_modelling, dataset, random_seed)
 
     if settings['data'] == 'geometrical':
         n_samples = settings['n_0']
@@ -37,17 +37,23 @@ def repeated_crm_experiment(random_seed, dataset_name, settings, lambda_grid):
     for m in range(settings['M']):
         # Optimization
 
-        train_logging_data, valid_logging_data = dataset_split(contexts, actions, losses, propensities, random_seed)
+        if settings['validation']:
 
-        for idx, lbd in enumerate(lambda_grid):
+            train_logging_data, valid_logging_data = dataset_split(contexts, actions, losses, propensities, random_seed)
+
+            for idx, lbd in enumerate(lambda_grid):
+                estimator.lbd = lbd
+                optimized_theta, loss_crm = optimize(estimator.objective_function, init_parameter, train_logging_data)
+                crm_loss_valid = estimator.evaluate(optimized_theta._value, valid_logging_data)
+                losses_valid[idx] = crm_loss_valid
+
+            lbd = lambda_grid[np.argmin(losses_valid)]
             estimator.lbd = lbd
-            optimized_theta, loss_crm = optimize(estimator.objective_function, init_parameter, train_logging_data)
-            crm_loss_valid = estimator.evaluate(optimized_theta._value, valid_logging_data)
-            losses_valid[idx] = crm_loss_valid
+            optimized_theta, loss_crm = optimize(estimator.objective_function, init_parameter, logging_data)
 
-        lbd = lambda_grid[np.argmin(losses_valid)]
-        estimator.lbd = lbd
-        optimized_theta, loss_crm = optimize(estimator.objective_function, init_parameter, logging_data)
+        else:
+            estimator.lbd = settings['lambda']
+            optimized_theta, loss_crm = optimize(estimator.objective_function, init_parameter, logging_data)
 
         ### New logging data
         loss_crm = loss_crm._value
@@ -70,12 +76,16 @@ def repeated_crm_experiment(random_seed, dataset_name, settings, lambda_grid):
 
         logging_data = actions, contexts, losses, propensities
 
+        losses_baseline = np.mean(losses)
+        losses_skyline = skyline_evaluation(pistar_determinist, dataset)
+
         ## Record
-        online_loss, _ = online_evaluation(optimized_theta._value, contextual_modelling, dataset, random_seed)
+        online_loss = online_evaluation(optimized_theta._value, contextual_modelling, dataset, random_seed)
         # regret = online_loss - optimal_loss
         regret = 0.
 
-        crm_loss_history.update(optimized_theta, online_loss, regret, loss_crm, cumulated_losses, n_samples)
+        crm_loss_history.update(optimized_theta, online_loss, regret, loss_crm, cumulated_losses, losses_baseline,
+                                losses_skyline, n_samples)
         crm_loss_history.show_last()
 
     return crm_loss_history

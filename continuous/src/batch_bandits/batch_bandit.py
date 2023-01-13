@@ -14,7 +14,7 @@ class Environment:
         self.n_logging_samples = n_logging_samples
 
     def sample_data(self, n):
-        return self.dataset.sample_data(n_samples=n)
+        return self.dataset.sample_data(n_samples=n, index=0)
 
     def sample_reward(self, actions, labels):
         actions = np.squeeze(actions)
@@ -24,7 +24,7 @@ class Environment:
         return np.arange(-5, 5, 0.5)
 
     def get_logging_data(self):
-        actions, contexts, losses, _, _ = self.dataset.sample_logged_data(self.n_logging_samples)
+        actions, contexts, losses, _ = self.dataset.get_logging_data(self.n_logging_samples)
         return actions, contexts, -losses
 
 
@@ -37,7 +37,7 @@ def instantiate_metrics():
 
 
 def get_agent(settings, kernel):
-    if settings['agent'] == 'Batch-KUCB':
+    if settings['agent'] == 'BKUCB':
         return BatchKernelUCB(settings, kernel)
     else:
         return SBPE(settings, kernel)

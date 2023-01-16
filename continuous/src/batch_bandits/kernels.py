@@ -19,9 +19,15 @@ def exp_kernel(gamma, x, y):
 def polynomial_kernel(dimension, x, y):
     return (jnp.dot(x, y) + 1) ** dimension
 
+@jax.jit
+def linear_kernel(x, y):
+    return jnp.dot(x, y) + 1
+
 def gram(func, params, x, y):
     return jax.vmap(lambda x1: jax.vmap(lambda y1: func(params, x1, y1))(y))(x)
 
+def gram_linear(func, x, y):
+    return jax.vmap(lambda x1: jax.vmap(lambda y1: func(x1, y1))(y))(x)
 
 class Kernel:
 
@@ -96,3 +102,28 @@ class Polynomial(Kernel):
             X2 (np.ndarray)
         """
         return gram(polynomial_kernel, self._dimension, X1, X2)
+
+class Linear(Kernel):
+
+    def __init__(self, *args):
+        """Initializes the class
+
+        Attributes:
+            random_seed (int):  random seed for data generation process
+
+        """
+        super(Linear, self).__init__(*args)
+        """Initializes the class
+
+        Attributes:
+            random_seed (int):  random seed for data generation process
+
+        """
+
+    def _pairwise(self, X1, X2):
+        """
+        Args:
+            X1 (np.ndarray)
+            X2 (np.ndarray)
+        """
+        return gram_linear(linear_kernel, X1, X2)

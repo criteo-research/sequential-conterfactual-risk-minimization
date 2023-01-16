@@ -56,5 +56,5 @@ python loss_evolution_crm_scrm.py tmc2007 $BEST_LAMBDA_CRM $BEST_LAMBDA_SCRM $CO
 ####################
 # EXP3: autotuned lambda vs best lambda a posteriori
 ####################
-python lambda_heuristic.py scene,yeast,tmc2007 $COMMON_PARAMS
+python lambda_heuristic.py scene,yeast,tmc2007 $COMMON_PARAMS -j 4
 ####################

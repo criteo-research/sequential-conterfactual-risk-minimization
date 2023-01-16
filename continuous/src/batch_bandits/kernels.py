@@ -14,6 +14,10 @@ def sqeuclidean_distance(x, y):
 def exp_kernel(gamma, x, y):
     return jnp.exp(- gamma * jnp.sqrt(sqeuclidean_distance(x, y)))
 
+# RBF Kernel
+@jax.jit
+def rbf_kernel(gamma, x, y):
+    return jnp.exp( - gamma * sqeuclidean_distance(x, y))
 
 @jax.jit
 def polynomial_kernel(dimension, x, y):
@@ -49,6 +53,31 @@ class Kernel:
     def _pairwise(self, X1, X2):
         pass
 
+class Gaussian(Kernel):
+
+    def __init__(self, *args):
+        """Initializes the class
+
+        Attributes:
+            random_seed (int):  random seed for data generation process
+
+        """
+        super(Gaussian, self).__init__(*args)
+        """Initializes the class
+
+        Attributes:
+            random_seed (int):  random seed for data generation process
+
+        """
+        self._std = self._param
+
+    def _pairwise(self, X1, X2):
+        """
+        Args:
+            X1 (np.ndarray)
+            X2 (np.ndarray)
+        """
+        return gram(rbf_kernel, 1/(2* self._std ** 2),X1,X2)
 
 class Exponential(Kernel):
 

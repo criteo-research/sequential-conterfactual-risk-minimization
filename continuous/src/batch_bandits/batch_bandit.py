@@ -2,7 +2,7 @@ from tqdm import tqdm
 import numpy as np
 from src.batch_bandits.batch_k_ucb import BatchKernelUCB
 from src.batch_bandits.sbpe import SBPE
-from src.batch_bandits.kernels import Polynomial, Exponential, Linear
+from src.batch_bandits.kernels import Polynomial, Exponential, Linear, Gaussian
 
 from utils.dataset import get_dataset_by_name
 from utils.utils import LossHistory, online_evaluation, start_experiment, get_logging_data, update_past_data
@@ -46,6 +46,8 @@ def get_kernel(settings):
         return Polynomial(settings)
     elif settings['kernel'] == 'linear':
         return Linear(settings)
+    elif settings['kernel'] == 'gaussian':
+        return Gaussian(settings)
     else:
         return Exponential(settings)
 

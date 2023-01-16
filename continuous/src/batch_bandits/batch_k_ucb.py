@@ -48,7 +48,7 @@ class BatchKernelUCB:
         K_S_s = self.kernel.evaluate(S, states)
         mean = jnp.dot(K_S_s.T, jnp.dot(K_matrix_inverse, past_rewards))
         K_ss = self.kernel.evaluate(states, states)
-        std = np.diag((1 / self.reg_lambda) * (K_ss - jnp.dot(K_S_s.T, jnp.dot(K_matrix_inverse, K_S_s))))
+        std = jnp.diag((1 / self.reg_lambda) * (K_ss - jnp.dot(K_S_s.T, jnp.dot(K_matrix_inverse, K_S_s))))
         ucb = jnp.squeeze(mean) + self.beta_t * jnp.sqrt(std)
         return ucb
 

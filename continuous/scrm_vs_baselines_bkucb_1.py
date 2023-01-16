@@ -49,7 +49,7 @@ def batch_bandit_experiments(dataset_name, settings, lambda_grid):
 
 settings = {
     'contextual_modelling': 'linear',
-    'kernel': 'polynomial',
+    'kernel': 'gaussian',
     'n_0': 10,
     'M': 10,
     'data': 'geometrical',

@@ -8,6 +8,9 @@ from jax import grad, jacfwd, jacrev
 def hessian(f):
     return jacfwd(jacrev(f))
 
+@jax.jit
+def inverse_gram_matrix(K):
+    return jnp.linalg.inv(K)
 
 class BatchKernelUCB:
 
@@ -31,7 +34,7 @@ class BatchKernelUCB:
     def set_gram_matrix(self):
         K = self.kernel.gram_matrix(self.past_states)
         K += self.reg_lambda * jnp.eye(K.shape[0])
-        self.K_matrix_inverse = jnp.linalg.inv(K)
+        self.K_matrix_inverse = inverse_gram_matrix(K)
 
     def instantiate(self, env):
         self.action_anchors = env.get_anchor_points()

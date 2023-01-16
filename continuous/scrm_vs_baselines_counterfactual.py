@@ -45,7 +45,7 @@ def counterfactual_experiments(experiment, dataset_name, settings, lambda_grid):
 settings = {
     'contextual_modelling': 'linear',
     'kernel': 'polynomial',
-    'n_0': 100,
+    'n_0': 10,
     'M': 10,
     'data': 'geometrical',
     'validation': False,
@@ -97,7 +97,7 @@ for dataset_name in ['pricing', 'advertising']:
 
 df = pd.DataFrame(data=results)
 df.to_latex(
-    'compare_baselines_scrm__counterfactual_continuous.tex', index=False, column_format='r', escape=False
+    'compare_baselines_scrm_counterfactual_continuous.tex', index=False, column_format='r', escape=False
 )
 
 print('-' * 80)

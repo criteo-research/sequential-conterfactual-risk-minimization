@@ -32,7 +32,6 @@ class SBPE:
 
     def set_gram_matrix(self):
         K = self.kernel.gram_matrix(self.past_states)
-        K += self.reg_lambda * jnp.eye(K.shape[0])
         self.K_matrix_inverse = inverse_gram_matrix(K)
 
     def instantiate(self, env):

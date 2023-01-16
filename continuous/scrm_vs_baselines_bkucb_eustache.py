@@ -57,7 +57,7 @@ settings = {
     'lambda':0.
 }
 
-bkucb_regularization_lambda_grid = np.array([1e1, 1e-1, 1e-3])
+bkucb_regularization_lambda_grid = np.array([1e1])
 
 
 def scrm_vs_baselines(results, dataset_name, settings):

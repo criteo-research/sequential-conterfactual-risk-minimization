@@ -35,7 +35,6 @@ def instantiate_metrics():
     }
 
 
-
 def get_agent(settings, kernel):
     if settings['agent'] == 'BKUCB':
         return BatchKernelUCB(settings, kernel)

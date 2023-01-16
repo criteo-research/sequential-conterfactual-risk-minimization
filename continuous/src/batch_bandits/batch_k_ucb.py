@@ -85,8 +85,13 @@ class BatchKernelUCB:
             [self.get_upper_confidence_bound(self.get_states(contexts, a * np.ones((contexts.shape[0]))), *args) for a
              in grid]))
 
+    def set_beta_t(self):
+        t = self.past_states.shape[0]
+        self.beta_t = 1/np.sqrt(t)
+
     def discrete_inference(self, contexts, args):
         grid = self.action_anchors
+        self.set_beta_t()
         ucb_all_actions = self.get_ucb_actions(contexts, grid, args)
         idx = jnp.argmax(ucb_all_actions, axis=1)
         grid = jnp.array(grid)

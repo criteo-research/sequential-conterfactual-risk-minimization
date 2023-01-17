@@ -20,7 +20,7 @@ def batch_bandit_experiments(dataset_name, settings, lambda_grid):
     batch_bandit_cumulated_losses = []
     times = []
 
-    for random_seed in range(1):
+    for random_seed in range(10):
         t0 = time.time()
 
         best_loss = np.inf
@@ -49,15 +49,15 @@ def batch_bandit_experiments(dataset_name, settings, lambda_grid):
 
 settings = {
     'contextual_modelling': 'linear',
-    'kernel': 'polynomial',
+    'kernel': 'gaussian',
     'n_0': 100,
-    'M': 10,
+    'M': 7,
     'data': 'geometrical',
     'validation': False,
     'lambda':0.
 }
 
-bkucb_regularization_lambda_grid = np.array([1e1])
+bkucb_regularization_lambda_grid = np.array([1e1, 1e0, 1e-1, 1e-2, 1e-3])
 
 
 def scrm_vs_baselines(results, dataset_name, settings):
@@ -98,7 +98,7 @@ for dataset_name in ['pricing', 'advertising']:
 
 df = pd.DataFrame(data=results)
 df.to_latex(
-    'compare_baselines_scrm_bkucb_5_continuous.tex', index=False, column_format='r', escape=False
+    'compare_baselines_scrm_bkucb_1_continuous.tex', index=False, column_format='r', escape=False
 )
 
 print('-' * 80)

@@ -45,7 +45,7 @@ def counterfactual_experiments(experiment, dataset_name, settings, lambda_grid):
 settings = {
     'contextual_modelling': 'linear',
     'kernel': 'polynomial',
-    'n_0': 10,
+    'n_0': 100,
     'M': 10,
     'data': 'geometrical',
     'validation': False,

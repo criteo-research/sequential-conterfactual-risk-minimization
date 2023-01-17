@@ -7,6 +7,17 @@ from src.batch_bandits.kernels import Polynomial, Exponential, Linear, Gaussian
 from utils.dataset import get_dataset_by_name
 from utils.utils import LossHistory, online_evaluation, start_experiment, get_logging_data, update_past_data
 
+import os
+import sys
+import time
+import os
+from datetime import date
+today = date.today()
+
+base_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../..")
+base_dir = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(base_dir)
+
 class Environment:
 
     def __init__(self, dataset, n_logging_samples):
@@ -51,6 +62,25 @@ def get_kernel(settings):
     else:
         return Exponential(settings)
 
+def save_result(dataset_name, random_seed, settings, rollout, online_loss, total_time):
+    task_name = 'algo:{}'.format(settings['agent'])
+    task_name += '|{}:{}'.format('lambda', settings['lambda'])
+    task_name += '|{}:{}'.format('rd', random_seed)
+    task_name += '|{}:{}'.format('env', dataset_name)
+    task_name += '|{}:{}'.format('rollout', rollout)
+    metrics_information = 'online_loss:{}'.format(online_loss)
+    metrics_information += '|total_time:{}'.format(total_time)
+
+    result = '{} {}\n'.format(task_name, metrics_information)
+
+    results_dir = 'results/{}'.format(today.strftime("%d-%m-%Y"))
+    if not os.path.exists(results_dir):
+        os.makedirs(results_dir)
+    fname = os.path.join(results_dir, 'metrics.txt')
+
+    with open(fname, 'a') as file:
+        file.write(result)
+
 
 def batch_bandit_experiment(random_seed, dataset_name, settings):
     dataset = get_dataset_by_name(dataset_name, random_seed)
@@ -65,6 +95,8 @@ def batch_bandit_experiment(random_seed, dataset_name, settings):
     metrics = instantiate_metrics()
     batch_size = settings['n_0']
 
+    t0 = time.time()
+
     for step in tqdm(range(settings['M'])):
         # choose a random context.
         batch_size *= 2
@@ -74,10 +106,13 @@ def batch_bandit_experiment(random_seed, dataset_name, settings):
         rewards = env.sample_reward(actions, labels)
 
         agent.update_agent(contexts, actions, rewards)
+        t = time.time() - t0
 
-        metrics['online_loss'].append(-np.mean(agent.past_rewards[-batch_size:]))
+        online_loss = -np.mean(agent.past_rewards[-batch_size:])
+        metrics['online_loss'].append(online_loss)
         metrics['cumulated_loss'].append(np.sum(-agent.past_rewards[1:]))
         print('Rollout {}, Online reward: {}'.format(step, -metrics['online_loss'][-1]))
+        save_result(dataset_name, random_seed, settings, step, online_loss, t)
 
     batch_online_losses = np.array([online_loss._value for online_loss in metrics['online_loss']])
     batch_cumulated_losses = np.array([cumulated_loss._value for cumulated_loss in metrics['cumulated_loss']])

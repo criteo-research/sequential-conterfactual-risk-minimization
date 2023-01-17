@@ -28,8 +28,8 @@ def instance_and_initialize_rl_model(algo, env, batch_length):
         raise Exception("algo name not implemented")
     model.policy=ActorCriticPolicy(observation_space=env.observation_space,
     action_space=env.action_space,
-    lr_schedule= lambda x :10,
-    net_arch= [1])
+    lr_schedule= lambda x :1,
+    net_arch= [])
     return model
 
 def run_rl(dataset, pi0, samples, n_reruns, n_replays, lambda_grid,
@@ -39,6 +39,7 @@ def run_rl(dataset, pi0, samples, n_reruns, n_replays, lambda_grid,
     rl_losses = []
     #define env
     env = CustomEnv(dataset)
+    # print(env.k)
     #to change to make it robust w.r.t. rollout schedule
     # batch_length=samples[1]
     # nb_rollouts = samples[-1]
@@ -125,6 +126,7 @@ if __name__ == '__main__':
     parser.add_argument('--n-rollouts', '-rol', type=int, default=10)
     parser.add_argument('--n-replays', '-rep', type=int, default=6)
     parser.add_argument('--n-reruns', '-rer', type=int, default=2)
+    parser.add_argument('--horizon', '-hor', type=int, default=1)
     parser.add_argument('--rollout-scheme', '-rs', default='linear', choices=('linear', 'doubling'))
     parser.add_argument('--rl-algo', '-rl', default='PPO', choices=('PPO', 'TRPO'))
     def parse_lambdas(x): return [float(_) for _ in x.split(',')]
@@ -143,7 +145,7 @@ if __name__ == '__main__':
         X_train, y_train, X_test, y_test, labels = load_dataset(dataset)
         pi0, pistar = make_baselines_skylines(dataset, X_train, y_train, n_jobs=4)
 
-        samples = rollout_indices(1*len(X_train), args.rollout_scheme, args.n_rollouts)
+        samples = rollout_indices(args.horizon*len(X_train), args.rollout_scheme, args.n_rollouts)
         print("rollout @", samples)
 
         def _run(l, algo='SCRM'):
@@ -198,8 +200,8 @@ if __name__ == '__main__':
 
     df = pd.DataFrame(data=results)
     df.to_latex(
-        'compare_crm_scrm_discrete-%s-rs_%s-ro_%d-rr_%d.tex' % (
-            dataset, args.rollout_scheme, args.n_rollouts, args.n_reruns
+        'compare_crm_scrm_discrete-%s-rs_%s-ro_%d-rr_%d-hor_%d.tex' % (
+            dataset, args.rollout_scheme, args.n_rollouts, args.n_reruns, args.horizon
         ), index=False, column_format='r', escape=False
     )
     print('-'*80)

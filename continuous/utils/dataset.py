@@ -242,7 +242,8 @@ class Pricing(Dataset):
 
     def get_losses_from_actions(self, z_bar, actions):
         epsilon_noise = self.rng.normal(loc=np.zeros_like(z_bar), scale=1)
-        return - (actions * (self.a(z_bar) - self.b(z_bar) * actions) + epsilon_noise)
+        losses = - (actions * (self.a(z_bar) - self.b(z_bar) * actions) + epsilon_noise)
+        return np.minimum(losses, np.zeros_like(losses))
 
     def get_optimal_parameter(self, contextual_modelling):
         z, z_bar = self.sample_data(10000, 0)

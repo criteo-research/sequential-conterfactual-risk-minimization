@@ -88,6 +88,7 @@ class CustomCallback(BaseCallback):
     """
     def __init__(self, verbose=0):
         super(CustomCallback, self).__init__(verbose)
+        self.losses_history=[]
         # self.model = model
         # print(self.model)
         # self.env = self.training_env
@@ -122,7 +123,7 @@ class CustomCallback(BaseCallback):
         self.env0 = self.model.env
         self.dataset = self.env0.env_method('get_dataset')[0]
         self.contexts, self.potentials = self.dataset.test_data
-        self.losses_history=[]
+
 
     def _on_rollout_start(self) -> None:
         """
@@ -169,5 +170,5 @@ class CustomCallback(BaseCallback):
                                'deterministicity': deterministicity_of_policy}]
         with open(self.dataset.name+'_'+self.model.__class__.__name__+'policy.pickle', 'wb') as f:
             pickle.dump(self.model.policy, f)
-        with open(self.dataset.name+'_'+self.model.__class__.__name__+'_cont.pickle', 'wb') as f:
+        with open(self.dataset.name+'_'+self.model.__class__.__name__+'loss_history_cont.pickle', 'wb') as f:
             pickle.dump(self.losses_history, f)

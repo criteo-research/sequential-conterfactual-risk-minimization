@@ -58,7 +58,7 @@ def pretrain_RL_models(model, env, initial_batch=100, pretraining=250, algo='PPO
     res=callback.losses_history
     return model, res[0]['lossM'], entropy_loss.item()
 
-def run_rl(results, dataset_name, settings, seed):
+def run_rl(results, dataset_name, settings, seed, rl_algo):
     initial_batch = settings['n_0']
     env = CustomEnv(dataset_name, 20000)
 
@@ -69,9 +69,9 @@ def run_rl(results, dataset_name, settings, seed):
     best_hyperparam=hyper_parap_grid[0]
     best_abs_error = float('inf')
     best_abs_ent = float('inf')
-    net_arch = []
-    lr_const = 1
-    algo='PPO'
+    net_arch = [1]
+    lr_const = .1
+    algo='TRPO'
     for hyper in hyper_parap_grid:
         env.reset
         model = initialize_RL_models(env, initial_batch=100, algo=algo,\
@@ -127,23 +127,26 @@ settings = {
     'data': 'geometrical',
     'validation': True,
     'lambda':0,
-    'seeds':5
+    'seeds':2
 }
 
 lambda_grid = np.array([1e-5, 1e-4, 1e-3, 1e-2, 1e-1])
+rl_algos = ['PPO', 'TRPO']
 
 
-def scrm_vs_rl(results, dataset_name, settings, lambda_grid):
+def scrm_vs_rl(results, dataset_name, settings, rl_algos):
 
     # RL
     rl_perfs=[]
-    for seed in range(settings['seeds']):
-        rl_perfs += [run_rl(results, dataset_name, settings, seed)]
-    print(rl_perfs)
-    # crm_histories = experiments(repeated_crm_experiment, dataset_name, settings, lambda_grid)
-    # crm_online_losses = np.array([crm_loss_history.online_loss for crm_loss_history in crm_histories])
-    mean_rl_online_losses = np.mean(rl_perfs)
-    std_rl_online_loss = np.std(rl_perfs)
+    results['dataset'] += [dataset_name]
+    for algo in rl_algos:
+        for seed in range(settings['seeds']):
+            rl_perfs += [run_rl(results, dataset_name, settings, seed, algo)]
+        # print(rl_perfs)
+        mean_rl_online_losses = np.mean(rl_perfs)
+        std_rl_online_loss = np.std(rl_perfs)
+        rl_perf, rl_std = mean_rl_online_losses, std_rl_online_loss
+        results[algo] += ['$%.3f \pm %.3f$' % (rl_perf, rl_std)]
     #
     # baseline_losses = np.array([crm_loss_history.losses_baseline for crm_loss_history in crm_histories])
     # mean_baseline_losses = np.mean(baseline_losses, axis=0)
@@ -174,15 +177,13 @@ def scrm_vs_rl(results, dataset_name, settings, lambda_grid):
     # plt.legend(loc='upper right')
     # plt.savefig('scrm_vs_crm_{}.pdf'.format(dataset_name))
     #
-    rl_perf, rl_std = mean_rl_online_losses, std_rl_online_loss
     # baseline_perf, baseline_std = mean_baseline_losses[-1], std_baseline_loss[-1]
     # skyline_perf, skyline_std = mean_skyline_losses[-1], std_skyline_loss[-1]
     # scrm_perf, scrm_std = mean_scrm_m_online_losses[-1], std_scrm_m_losses[-1]
 
 
-    results['dataset'] += [dataset_name]
     # results['Baseline'] += ['$%.3f \pm %.3f$' % (baseline_perf, baseline_std)]
-    results['RL'] += ['$%.3f \pm %.3f$' % (rl_perf, rl_std)]
+    # results['RL'] += ['$%.3f \pm %.3f$' % (rl_perf, rl_std)]
     # results['SCRM'] += ['$%.3f \pm %.3f$' % (scrm_perf, scrm_std)]
     # results['Skyline'] += ['$%.3f \pm %.3f$' % (skyline_perf, skyline_std)]
 
@@ -191,7 +192,7 @@ def scrm_vs_rl(results, dataset_name, settings, lambda_grid):
 results = defaultdict(list)
 
 for dataset_name in ['pricing', 'advertising']:
-    results = scrm_vs_rl(results, dataset_name, settings, lambda_grid)
+    results = scrm_vs_rl(results, dataset_name, settings, rl_algos)
 
 df = pd.DataFrame(data=results)
 df.to_latex(

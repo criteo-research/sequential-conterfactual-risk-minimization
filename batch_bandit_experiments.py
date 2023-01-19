@@ -65,8 +65,9 @@ if __name__ == '__main__':
 
     dataset_name = 'yeast'
     # Report performances
-    bkucb_perf, bkucb_std = bkucb_experiments(dataset_name, lambdas)
+
     sbpe_perf, sbpe_std = sbpe_experiments(dataset_name)
+    bkucb_perf, bkucb_std = bkucb_experiments(dataset_name, lambdas)
 
     results['dataset'] += [dataset_name]
 

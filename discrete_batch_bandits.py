@@ -467,7 +467,7 @@ def bkcub_experiment(dataset, lbd, seed):
         'agent': 'BKUCB'
     }
 
-    kernel = Gaussian()
+    kernel = Polynomial()
     agent = BatchKernelUCB(settings, kernel)
     return batch_bandit_experiment(agent, kernel, dataset, seed, settings)
 

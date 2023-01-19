@@ -61,11 +61,12 @@ def sbpe_experiments(dataset_name):
 if __name__ == '__main__':
     results = defaultdict(list)
 
-    dataset_name = 'scene'
+
+
+    dataset_name = 'yeast'
     # Report performances
     bkucb_perf, bkucb_std = bkucb_experiments(dataset_name, lambdas)
     sbpe_perf, sbpe_std = sbpe_experiments(dataset_name)
-
 
     results['dataset'] += [dataset_name]
 
@@ -81,10 +82,11 @@ if __name__ == '__main__':
     print(df)
     print('-' * 80)
 
-    dataset_name = 'yeast'
+    dataset_name = 'scene'
     # Report performances
     bkucb_perf, bkucb_std = bkucb_experiments(dataset_name, lambdas)
     sbpe_perf, sbpe_std = sbpe_experiments(dataset_name)
+
 
     results['dataset'] += [dataset_name]
 

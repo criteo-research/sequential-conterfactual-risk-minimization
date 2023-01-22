@@ -159,7 +159,7 @@ def sequential_crm_experiment(settings, random_seed=123):
     return sequential_crm_online_losses
 
 settings = {
-    'M':25,
+    'M':22,
     'n_0':100
 }
 
@@ -180,4 +180,4 @@ scrm_losses_std = np.std(sequential_crm_losses, axis=0)
 
 data=np.vstack([crm_losses, crm_losses_std, scrm_losses, scrm_losses_std])
 df = pd.DataFrame(data.T, columns=['CRM loss', 'CRM std', 'SCRM loss', 'SCRM std'])
-df.to_csv('gaussian_example.csv')  
+df.to_csv('gaussian_example.csv')

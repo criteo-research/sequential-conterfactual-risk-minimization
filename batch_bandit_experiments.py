@@ -29,10 +29,10 @@ def bkucb_experiments(dataset_name, lambda_grid):
             final_loss = np.squeeze(rollout_losses)[-1]
             seeds_losses.append(final_loss)
 
-        seed_loss = np.mean(seeds_losses)
+        lbd_loss = np.mean(seeds_losses)
 
-        if seed_loss < best_loss:
-            best_loss = seed_loss
+        if lbd_loss < best_loss:
+            best_loss = lbd_loss
             loss_std = np.std(seeds_losses)
 
     return best_loss, loss_std

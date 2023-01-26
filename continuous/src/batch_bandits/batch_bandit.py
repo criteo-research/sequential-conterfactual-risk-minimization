@@ -108,14 +108,15 @@ def batch_bandit_experiment(random_seed, dataset_name, settings):
         agent.update_agent(contexts, actions, rewards)
         t = time.time() - t0
 
-        online_loss = -np.mean(agent.past_rewards[-batch_size:])
+        contexts, potentials = dataset.test_data
+        actions = agent.sample_actions(contexts)
+        rewards = env.sample_reward(actions, labels)
+        online_loss = -np.mean(rewards)
         metrics['online_loss'].append(online_loss)
-        metrics['cumulated_loss'].append(np.sum(-agent.past_rewards[1:]))
         print('Rollout {}, Online reward: {}'.format(step, -metrics['online_loss'][-1]))
         save_result(dataset_name, random_seed, settings, step, online_loss, t)
 
     batch_online_losses = np.array([online_loss._value for online_loss in metrics['online_loss']])
-    batch_cumulated_losses = np.array([cumulated_loss._value for cumulated_loss in metrics['cumulated_loss']])
-    return np.expand_dims(batch_online_losses, axis=0), np.expand_dims(batch_cumulated_losses, axis=0)
+    return np.expand_dims(batch_online_losses, axis=0)
 
 

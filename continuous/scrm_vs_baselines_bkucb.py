@@ -17,7 +17,6 @@ import pandas as pd
 
 def batch_bandit_experiments(dataset_name, settings, lambda_grid):
     batch_bandit_online_losses = []
-    batch_bandit_cumulated_losses = []
     times = []
 
     for random_seed in range(10):
@@ -25,14 +24,13 @@ def batch_bandit_experiments(dataset_name, settings, lambda_grid):
 
         best_loss = np.inf
         best_onlines_losses = None
-        best_cumulated_losses = None
 
         # a posteriori selection
 
         for lbd in lambda_grid:
 
             settings['lambda'] = lbd
-            online_losses, cumulated_losses = batch_bandit_experiment(random_seed, dataset_name, settings)
+            online_losses = batch_bandit_experiment(random_seed, dataset_name, settings)
             times.append(time.time() - t0)
 
             loss = np.squeeze(online_losses)[-1]
@@ -40,12 +38,10 @@ def batch_bandit_experiments(dataset_name, settings, lambda_grid):
             if loss < best_loss:
                 best_loss = loss
                 best_onlines_losses = online_losses
-                best_cumulated_losses = cumulated_losses
 
             batch_bandit_online_losses.append(best_onlines_losses)
-            batch_bandit_cumulated_losses.append(best_cumulated_losses)
 
-    return batch_bandit_online_losses, batch_bandit_cumulated_losses, times
+    return batch_bandit_online_losses, times
 
 settings = {
     'contextual_modelling': 'linear',
@@ -57,7 +53,7 @@ settings = {
     'lambda':0.
 }
 
-bkucb_regularization_lambda_grid = np.array([1e1, 1e0, 1e-1, 1e-2, 1e-3])
+bkucb_regularization_lambda_grid = np.array([1e2, 1e1, 1e0])
 
 
 def scrm_vs_baselines(results, dataset_name, settings):
@@ -66,7 +62,7 @@ def scrm_vs_baselines(results, dataset_name, settings):
 
     # Batch K-UCB
     settings['agent'] = 'BKUCB'
-    bkucb_online_losses, bkucb_cumulated_losses, bkucb_times = batch_bandit_experiments(
+    bkucb_online_losses, bkucb_times = batch_bandit_experiments(
         dataset_name, settings, bkucb_regularization_lambda_grid)
     bkucb_online_losses = np.concatenate(bkucb_online_losses, axis=0)
     bkucb_online_losses, bkucb_online_losses_std = np.mean(bkucb_online_losses, axis=0), np.std(

@@ -7,11 +7,8 @@ from sklearn import datasets
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.linear_model import LogisticRegression, RidgeCV
 
-from dataset_utils import load_warfarin
-
 dataset_dico = {
     'advertising': 'Advertising',
-    'warfarin': 'WarfarinDataset',
     'pricing': 'Pricing'
 }
 from scipy.stats import norm
@@ -50,7 +47,7 @@ class Advertising(Dataset):
 
     """
 
-    def __init__(self, name, sigma=1, mode='noisymoons', **kw):
+    def __init__(self, name, sigma=1, **kw):
         """Initializes the class
 
         Attributes:
@@ -109,21 +106,8 @@ class Advertising(Dataset):
 
     def get_X_y(self, n_samples):
 
-        if self.mode == 'noisycircles':
-            return datasets.make_circles(n_samples=n_samples, factor=.5,
-                                         noise=.05, random_state=self.random_seed)
-        elif self.mode == 'noisymoons':
-            return datasets.make_moons(n_samples=n_samples, noise=.05, random_state=self.random_seed)
+        return datasets.make_moons(n_samples=n_samples, noise=.05, random_state=self.random_seed)
 
-        elif self.mode == 'anisotropic':
-            X, y = datasets.make_blobs(n_samples=n_samples, centers=3,
-                                       cluster_std=[[1 / 2, 1], [3 / 2, 1 / 2], [1, 3 / 2]],
-                                       random_state=self.random_seed)
-            X = np.dot(X, self.rng.randn(2, 2))
-            return X, y
-
-        else:
-            return
 
     def generate_data(self, n_samples):
         """ Setup the experiments and creates the data
@@ -197,18 +181,8 @@ class Pricing(Dataset):
         self.parameter_scale = 0.01
 
     def get_functions(self, mode):
-        if mode == 'quadratic':
-            a = lambda z: 2 * z ** 2
-            b = lambda z: 0.6 * z
-        elif mode == 'step':
-            a = lambda z: np.where((z < 1.5), 5, 6)
-            b = lambda z: np.where((z < 1.5), 0.7, 1.2)
-        elif mode == 'sigmoid':
-            a = lambda z: 1 / (1 + np.exp(z))
-            b = lambda z: 2 / (1 + np.exp(z)) + 0.1
-        else:
-            a = lambda z: 6 * z
-            b = lambda z: z
+        a = lambda z: 2 * z ** 2
+        b = lambda z: 0.6 * z
         return a, b
 
 
@@ -258,135 +232,5 @@ class Pricing(Dataset):
             return
         pistar_determinist.fit(embedding, optimal_prices)
         return np.concatenate([np.array([pistar_determinist.intercept_]), pistar_determinist.coef_]), pistar_determinist
-
-
-class WarfarinDataset(Dataset):
-    """ Warfarin Data
-
-    """
-
-    def __init__(self, name, path='data/', **kw):
-        """Initializes the class
-
-        Attributes:
-            alpha (np.array): parameters of the log-normal distribution
-            sigma (float): variance parameter in log-normal distribution
-            outlier_ratio (float): outlier ratio
-
-        Note:
-            Other attributed inherited from SyntheticData class
-        """
-        super(WarfarinDataset, self).__init__(**kw)
-        self.path = path
-        self.file_name = "warfarin.npy"
-        self.name = name
-        self.dimension = 100
-        self.train_size = 2 / 3
-        self.val_size = 0.5
-        self._load_and_setup_data()
-        self.parameter_scale = 0.
-        self.logging_scale = 1
-
-
-    def _load_and_setup_data(self):
-        """ Load data from csv file
-        """
-        file_path = os.path.join(self.path, self.file_name)
-        # data = np.load(file_path)
-        # features = data[:, :self.dimension]
-        # actions = data[:, self.dimension]
-        # losses = - data[:, self.dimension+1]
-        # propensities = data[:, self.dimension+2]
-        # potentials = data[:, self.dimension+3]
-        X, a, p, y = load_warfarin(reduce_dim=100)
-        features = X
-        actions = a
-        potentials = y
-        losses = self.get_losses_from_actions(potentials, actions)
-        propensities = p
-
-        self.features_train, self.features_test, \
-        self.actions_train, self.actions_test, \
-        self.potentials_train, self.potentials_test, \
-        self.losses_train, self.losses_test, \
-        self.propensities_train, self.propensities_test = train_test_split(X, a, y, losses, propensities, test_size=0.33, random_state=self.random_seed)
-
-        # self.mu_dose = np.std(potentials)
-        #
-        # idx = self.rng.permutation(features.shape[0])
-        # features, actions, losses, propensities, potentials = features[idx], actions[idx], losses[idx], \
-        #                                                      propensities[idx], potentials[idx]
-        # # scaler = MinMaxScaler().fit(features)
-        # # features = scaler.transform(features)
-        #
-        # size = int(features.shape[0] * self.train_size)
-        # self.actions_train, self.actions_test = actions[:size], actions[size:]
-        # self.features_train, self.features_test = features[:size, :], features[size:, :]
-        # self.losses_train, self.losses_test = losses[:size], losses[size:]
-        # self.propensities_train, self.propensities_test = propensities[:size], propensities[size:]
-        # self.potentials_train, self.potentials_test = potentials[:size], potentials[size:]
-
-        # size = int(features.shape[0] * self.val_size)
-        # self.actions_train, self.actions_valid = a_train[:size], a_train[size:]
-        # self.features_train, self.features_valid = f_train[:size, :], f_train[size:, :]
-        # self.losses_train, self.losses_valid = l_train[:size], l_train[size:]
-        # self.propensities_train, self.propensities_valid = propensities_train[:size], propensities_train[size:]
-        # self.potentials_train, self.potentials_valid = potentials_train[:size], potentials_train[size:]
-
-        # self.baseline_loss_train = np.mean(self.losses_train)
-        #
-        #
-        # self.baseline_loss_test = np.mean(self.losses_test)
-
-        self.test_data = self.features_test, self.potentials_test
-
-    def get_logged_data(self):
-        """ Setup the experiments and creates the data
-        """
-        return self.actions_train, self.features_train, self.losses_train, self.propensities_train, self.potentials_train
-
-    def get_losses_from_actions(self, potentials, actions):
-        # return np.maximum(np.abs(potentials - actions) - 0.1*potentials, 0.)
-        return (1/3*(actions - potentials))**2
-
-    def get_angela_losses_from_actions(self, potentials, actions):
-        return np.maximum(np.abs(potentials - actions) - 0.1*potentials, 0.)
-        # return (actions - potentials)**2
-
-    # def sample_logged_data(self, n_samples):
-    #     """ Setup the experiments and creates the data
-    #     """
-    #     return next(self.data_generator)
-
-    # def sample_data(self, n_samples):
-    #     _, contexts, _, _, potentials = self.sample_logged_data(n_samples)
-    #     return contexts, potentials
-
-    def get_logging_data(self, n_samples):
-
-        start = 0
-        end = n_samples
-
-        actions = self.actions_train[start:end]
-        contexts = self.features_train[start:end, :]
-        losses = self.losses_train[start:end]
-        propensities = self.propensities_train[start:end]
-
-        logging_data = actions, contexts, losses, propensities
-        return logging_data
-
-    def sample_data(self, n_samples, index):
-
-        start = n_samples * index
-        end = start + n_samples
-
-        contexts = self.features_train[start:end, :]
-        potentials = self.potentials_train[start:end]
-
-        return contexts, potentials
-
-
-
-
 
 

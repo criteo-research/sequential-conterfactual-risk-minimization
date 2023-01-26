@@ -11,7 +11,6 @@ class Model(object):
     def create_start_parameter(self, dataset):
         d = dataset.dimension
         if self.name == 'linear':
-            #             return self.rng.normal(scale=0.1, size=d + 2)
             return np.concatenate([np.array([1.]), self.rng.normal(scale=dataset.parameter_scale, size=d)])
 
         elif self.name == 'polynomial':

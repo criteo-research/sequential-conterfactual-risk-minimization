@@ -19,18 +19,15 @@ class Estimator():
         contextual_param = self.contextual_modelling.get_parameter(param, contexts)
         n = actions.shape[0]
         alpha = 1/n
-        # alpha = 0
         pi_values = self.pdf(contextual_param, actions)
         importance_weights = pi_values / (propensities + alpha * pi_values)
         mean = jnp.mean(losses * importance_weights)
         std = jnp.std(losses * (importance_weights-1))
-        # std = jnp.std(losses * importance_weights)
         return mean + self.lbd * std
 
     def evaluate(self, param, logging_data):
         actions, contexts, losses, propensities = logging_data
         contextual_param = self.contextual_modelling.get_parameter(param, contexts)
-        # propensities = np.clip(propensities, 1e-5, None)
         importance_weights = self.pdf(contextual_param, actions)/propensities
         return np.mean(losses * importance_weights)
 

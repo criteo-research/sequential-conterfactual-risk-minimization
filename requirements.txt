@@ -1,0 +1,11 @@
+pandas
+jax
+jupyter
+jupyterlab
+joblib
+scikit-learn
+scipy
+jax
+jaxlib
+jaxopt
+typing_extensions

@@ -70,7 +70,15 @@ Figure 4: run the Jupyter notebook
 distance_scrm_gaussian_example.ipynb
 ```
 ### RL Baselines
+Discrete datasets
 
-`$ ...`
+```
+python compare_rl_scrm.py scene,yeast,tmc2007
+```
+Continuous datasets
+
+```
+python continuous/scrm_vs_rl.py
+```
 
 

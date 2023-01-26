@@ -93,7 +93,6 @@ python continuous/scrm_vs_baselines_bkucb.py
 ```
 
 
-```
 ### RL Baselines
 Discrete datasets
 
@@ -106,8 +105,6 @@ Continuous datasets
 python continuous/scrm_vs_rl.py
 ```
 
-
-```
 
 Figure 7: run the Jupyter notebook in continuous/
 

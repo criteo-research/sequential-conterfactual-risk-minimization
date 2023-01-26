@@ -32,11 +32,12 @@ bunzip2 *bz2
 bash generate_figures_and_tables.sh
 ```
 
+
 ### Continuous Experiments
 
 Go into the `continuous`sub folder and run the following.
 
-Figure 1: run the Jupyter notebook 
+Figure 1: run the Jupyter notebook in continuous/
 
 ```
 gaussian_example.ipynb
@@ -45,29 +46,52 @@ gaussian_example.ipynb
 Figure 2 SCRM vs CRM, continuous datasets 
 
 ```
-python scrm_vs_crm.py
+python continuous/scrm_vs_crm.py
 ```
 
-Table 1 SCRM vs CRM, example 3.1
+Table 1 SCRM vs CRM, example 3.1 
 
 ```
-python gaussian_example.py
+python continuous/gaussian_example.py
 ```
 
 Table 2 SCRM vs baselines, continuous datasets
 
 ```
-python scrm_vs_baselines_counterfactual.py
-python scrm_vs_baselines_sbpe.py
-python scrm_vs_baselines_bkucb.py
-python scrm_vs_rl.py
+python continuous/scrm_vs_baselines_counterfactual.py
+python continuous/scrm_vs_baselines_sbpe.py
+python continuous/scrm_vs_baselines_bkucb.py
+python continuous/scrm_vs_rl.py
 
 ```
 
-Figure 4: run the Jupyter notebook 
+Figure 3,9: run the Jupyter notebook
+
+```
+compare_estimators.ipynb
+```
+
+
+Figure 4: run the Jupyter notebook in continuous/
 
 ```
 distance_scrm_gaussian_example.ipynb
+
+
+### Batch bandits Baselines
+Discrete datasets
+
+```
+python batch_bandits_experiments.py
+```
+Continuous datasets
+
+```
+python continuous/scrm_vs_baselines_sbpe.py
+python continuous/scrm_vs_baselines_bkucb.py
+```
+
+
 ```
 ### RL Baselines
 Discrete datasets
@@ -82,3 +106,10 @@ python continuous/scrm_vs_rl.py
 ```
 
 
+```
+
+Figure 7: run the Jupyter notebook in continuous/
+
+```
+holderian_error_bound_assumption.ipynb
+```

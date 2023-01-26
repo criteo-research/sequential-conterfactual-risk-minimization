@@ -47,7 +47,7 @@ settings = {
     'contextual_modelling': 'linear',
     'kernel': 'gaussian',
     'n_0': 100,
-    'M': 7,
+    'M': 10,
     'data': 'geometrical',
     'validation': False,
     'lambda':0.
@@ -69,21 +69,16 @@ def scrm_vs_baselines(results, dataset_name, settings):
         bkucb_online_losses, axis=0)
 
 
-    # RL Baselines
-
 
     # Report performances
     bkucb_perf, bkucb_std = bkucb_online_losses[-1], bkucb_online_losses_std[-1]
-    # ppo_perf, ppo_std =
-    # trpo_perf, trpo_std =
+
 
 
     results['dataset'] += [dataset_name]
 
     results['BKUCB'] += ['$%.3f \pm %.3f$' % (bkucb_perf, bkucb_std)]
 
-    # results['PPO'] += ['$%.3f \pm %.3f$' % (ppo_perf, ppo_std)]
-    # results['TRPO'] += ['$%.3f \pm %.3f$' % (trpo_perf, trpo_std)]
 
     return results
 

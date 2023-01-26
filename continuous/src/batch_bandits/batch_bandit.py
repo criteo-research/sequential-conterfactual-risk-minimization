@@ -110,7 +110,7 @@ def batch_bandit_experiment(random_seed, dataset_name, settings):
 
         contexts, potentials = dataset.test_data
         actions = agent.sample_actions(contexts)
-        rewards = env.sample_reward(actions, labels)
+        rewards = env.sample_reward(actions, potentials)
         online_loss = -np.mean(rewards)
         metrics['online_loss'].append(online_loss)
         print('Rollout {}, Online reward: {}'.format(step, -metrics['online_loss'][-1]))

@@ -11,20 +11,21 @@ from dataset_utils import load_dataset
 def create_figure(samples,
                   crm_loss_evolution_mean, crm_loss_evolution_std,
                   scrm_loss_evolution_mean, scrm_loss_evolution_std):
-    fig, ax1 = plt.subplots(ncols=1, constrained_layout=True, figsize=(8, 4))
+    fig, ax1 = plt.subplots(ncols=1, constrained_layout=True, figsize=(4, 3), dpi=100, facecolor='w', edgecolor='k')
     ax1.set_title(args.dataset)
-    ax1.set_xlabel('Samples')
+    ax1.set_xlabel('Rollouts $m$')
+    rollouts = np.arange(len(samples))
     # ax1.plot(samples, np.ones_like(samples)*stochastic_hamming_loss(pi0, X_test, y_test), '--', label='Baseline', color='gray')
-    ax1.plot(samples, crm_loss_evolution_mean, 'o-', color='blue', label='CRM')
-    ax1.fill_between(samples,
+    ax1.plot(rollouts, crm_loss_evolution_mean, 'o-', color='blue', label='CRM')
+    ax1.fill_between(rollouts,
                      crm_loss_evolution_mean - crm_loss_evolution_std,
                      crm_loss_evolution_mean + crm_loss_evolution_std, alpha=.25, color='blue', )
-    ax1.plot(samples, scrm_loss_evolution_mean, 'o-', color='orange', label='SCRM')
-    ax1.fill_between(samples,
+    ax1.plot(rollouts, scrm_loss_evolution_mean, 'o-', color='orange', label='SCRM')
+    ax1.fill_between(rollouts,
                      scrm_loss_evolution_mean - scrm_loss_evolution_std,
                      scrm_loss_evolution_mean + scrm_loss_evolution_std, alpha=.25, color='orange')
     # ax1.plot(samples, np.ones_like(samples)*stochastic_hamming_loss(pistar, X_test, y_test), 'k--', label='Skyline')
-    ax1.set_ylabel('Hamming Loss')
+    ax1.set_ylabel('Loss')
     ax1.legend(loc='best')
     fn = 'loss_evolution_crm_scrm-%s-%s.png' % (args.prefix, args.dataset)
     plt.savefig(fn)

@@ -4,8 +4,24 @@ This repository contains the code for reproducing experiments of the paper Seque
 
 ## Prerequisites
 
+Software:
+
 ```
 pip install -U -r requirements.txt
+```
+
+Download discrete datasets from the LibSVM website:
+
+```
+BASEURL="https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multilabel"
+wget $BASEURL/yeast_test.bz2
+wget $BASEURL/yeast_train.bz2
+wget $BASEURL/scene_test.bz2
+wget $BASEURL/scene_train.bz2
+wget $BASEURL/tmc2007_test.bz2
+wget $BASEURL/tmc2007_train.bz2
+
+bunzip2 *bz2
 ```
 
 ## Instructions

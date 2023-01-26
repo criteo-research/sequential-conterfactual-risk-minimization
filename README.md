@@ -76,6 +76,7 @@ Figure 4: run the Jupyter notebook in continuous/
 
 ```
 distance_scrm_gaussian_example.ipynb
+```
 
 
 ### Batch bandits Baselines

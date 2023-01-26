@@ -55,7 +55,7 @@ Table 1 SCRM vs CRM, example 3.1
 python continuous/gaussian_example.py
 ```
 
-Table 2 SCRM vs baselines, continuous datasets
+Table 3 SCRM vs baselines, continuous datasets
 
 ```
 python continuous/scrm_vs_baselines_counterfactual.py
@@ -65,7 +65,7 @@ python continuous/scrm_vs_rl.py
 
 ```
 
-Figure 3,9: run the Jupyter notebook
+Figure 3,10: run the Jupyter notebook
 
 ```
 compare_estimators.ipynb
@@ -106,7 +106,7 @@ python continuous/scrm_vs_rl.py
 ```
 
 
-Figure 7: run the Jupyter notebook in continuous/
+Figure 8: run the Jupyter notebook in continuous/
 
 ```
 holderian_error_bound_assumption.ipynb
